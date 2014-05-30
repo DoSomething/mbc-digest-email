@@ -55,6 +55,6 @@ echo '------- mbc-user-digest START: ' . date('D M j G:i:s T Y') . ' -------', "
 $mbcDigestEmail = new MBC_DigestEmail($credentials, $config, $settings);
 
 // Process digest message requests by mbp-user-digest
-$mbcDigestEmail->consumeUserDigestQueue();
+$mbcDigestEmail->generateDigests();
 
 echo '------- mbc-user-digest END: ' . date('D M j G:i:s T Y') . ' -------', "\n";

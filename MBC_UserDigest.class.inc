@@ -86,13 +86,45 @@ class MBC_UserDigest
   }
 
   /**
+   * Controller for Digest message processing.
+   */
+  public function generateDigests() {
+
+    $targetUsers = $this->consumeUserDigestQueue();
+
+    if ($targetUsers) {
+
+      // Remove campaign_signups that have a matching report_back
+      list($targetUsers, $targetCampaigns) = $this->processDigestCampaignActivity($targetUsers);
+
+      // Collect active campaign details
+      $campaignDetails = $this->getCampaignDetails($targetCampaigns);
+
+      // Build gloabal_merge_var values that include campaign markup
+      $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
+
+      $mergeMars = $this->ComposeMergeVars($targetUsers);
+
+      // Assemble and send Mandrill digest message submission
+      $mergeVars = $this->composeDigestSubmission($mergeMars, $globalMergeVars);
+
+      $this->submitToMandrill($composedDigestList, $campaignDetails, $mbDeliveryTags);
+
+    }
+    else {
+      echo '------- mbc-user-digest processDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
+    }
+
+  }
+
+  /**
    * Collect a batch of email address for submission to MailChimp from the
    * related RabbitMQ queue.
    *
    * @return array
    *   An array of the status of the job
    */
-  public function consumeUserDigestQueue() {
+  private function consumeUserDigestQueue() {
     // Get the status details of the queue by requesting a declare
     list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
 
@@ -101,37 +133,31 @@ class MBC_UserDigest
     $unackedCount = $status[2];
 
     $messageDetails = '';
-    $newDigests = array();
+    $targetUsers = array();
     $processedCount = 0;
 
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      $messagePayload = unserialize($messageDetails->body);
-      $newDigests[] = array(
+      $messagePayload = json_decode($messageDetails->body);
+      $targetUsers[] = array(
         'email' => $messagePayload['email'],
         'fname' => $messagePayload['merge_vars']['FNAME'],
         'uid' => $messagePayload['uid'],
-        'birthdate' => $messagePayload['birthdate'],
-        'mobile' => isset($messagePayload['mobile']) ? $messagePayload['mobile'] : '',
-        'mb_delivery_tag' => $messageDetails->delivery_info['delivery_tag'],
+        'campaigns' => $messagePayload['campaigns']
       );
       $messageCount--;
       $processedCount++;
     }
 
-    $campaignDetails = $this->getCampaignDetails();
-    list($composedDigestList, $mbDeliveryTags) = $this->composeDigestSubmissions($newDigests);
-    if (count($composedDigestList) > 0) {
-      $this->submitToMandrill($composedDigestList, $campaignDetails, $mbDeliveryTags);
+    if (count($targetUsers) > 0) {
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('consumeUserDigestQueue');
       $this->statHat->reportCount($processedCount);
+      return $targetUsers;
     }
     else {
-      $results = 'No new digest message to submit to Mandrill.';
+      $results = FALSE;
     }
-
-    return $results;
 
   }
 
