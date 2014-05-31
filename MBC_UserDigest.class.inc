@@ -82,13 +82,19 @@ class MBC_UserDigest
 
     // Stathat
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
-    $this->statHat->setIsProduction(TRUE);
+    $this->statHat->setIsProduction(FALSE);
   }
 
   /**
    * Controller for Digest message processing.
    */
   public function generateDigests() {
+    
+
+$bla = FALSE;
+if ($bla) {
+  $bla = TRUE;
+}
 
     $targetUsers = $this->consumeUserDigestQueue();
 
@@ -125,6 +131,7 @@ class MBC_UserDigest
    *   An array of the status of the job
    */
   private function consumeUserDigestQueue() {
+
     // Get the status details of the queue by requesting a declare
     list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
 
@@ -139,12 +146,14 @@ class MBC_UserDigest
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
       $messagePayload = json_decode($messageDetails->body);
-      $targetUsers[] = array(
-        'email' => $messagePayload['email'],
-        'fname' => $messagePayload['merge_vars']['FNAME'],
-        'uid' => $messagePayload['uid'],
-        'campaigns' => $messagePayload['campaigns']
+      $targetUsers[$processedCount] = array(
+        'email' => $messagePayload->email,
+        'fname' => $messagePayload->merge_vars->FNAME,
+        'campaigns' => $messagePayload->campaigns
       );
+      if (isset($messagePayload->drupal_uid)) {
+        $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
+      }
       $messageCount--;
       $processedCount++;
     }
@@ -160,14 +169,68 @@ class MBC_UserDigest
     }
 
   }
+  
+  /**
+   * Process targetUsers entries to remove campaign activities that also have a
+   * report back entry.
+   *
+   * @param array $targetUsers
+   *   All of the users and their campaign activity to proess.
+   *
+   * @return array $targetUsers
+   *   The updated list with entries with report backs removed.
+   *
+   * @return array $targetCampaigns
+   *   All of the campaigns referenced in $targetUsers.
+   */
+  private function processDigestCampaignActivity($targetUsers) {
+
+    $targetCampaigns = array();
+
+    $processedTargetUsers = $targetUsers;
+    foreach ($targetUsers as $targetUserIndex => $targetUser) {
+
+      // Remove signup that have matching reportback entries
+      $targetUserCampaigns = $targetUser['campaigns'];
+      foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
+        if (isset($campaignActivity->reportback)) {
+          $removeNID = $campaignActivity->nid;
+          unset($targetUserCampaigns[$campaignActivityIndex]);
+          foreach ($campaignActivity as $activityCount => $activity) {
+            if ($activity['nid'] == $removeNID) {
+              unset($targetUserCampaigns[$activityCount]);
+            }
+          }
+        }
+        else {
+          $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
+        }
+      }
+
+      // Remove user that does not have campaign signups
+      if (count($targetUserCampaigns) > 0) {
+        $processedTargetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
+      }
+      else {
+        unset($processedTargetUsers[$targetUserIndex]);
+      }
+
+    }
+
+    return array($processedTargetUsers, $targetCampaigns);
+  }
 
   /**
    * Collect active campaign details from Campaigns API.
    *
+   * @param array $targetCampaigns
+   *   The drupal_nid s of the campaigns that the digest messages need details
+   *   about in order to build the message contents.
+   *
    * @return array $campaignDetails
    *   Details of all the active campaigns
    */
-  private function getCampaignDetails() {
+  private function getCampaignDetails($targetCampaigns) {
     
     
     return $campaignDetails;

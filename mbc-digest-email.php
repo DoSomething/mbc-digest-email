@@ -52,7 +52,7 @@ $settings = array(
 echo '------- mbc-user-digest START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
 
 // Kick off
-$mbcDigestEmail = new MBC_DigestEmail($credentials, $config, $settings);
+$mbcDigestEmail = new MBC_UserDigest($credentials, $config, $settings);
 
 // Process digest message requests by mbp-user-digest
 $mbcDigestEmail->generateDigests();
