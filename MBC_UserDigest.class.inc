@@ -244,8 +244,32 @@ if ($bla) {
   }
 
   /**
+   * Process campaign details into the Mandrill send-template
+   * golbal_merge_vars format.
+   *
+   * @param array $campaignDetails
+   *   All of the details of each campaign that will be used to build the
+   *   global_merge_var entry for each campaign.
+   *
+   * @return array $globalMergeVars
+   *   All of the campaigns in Mandrill global_merge_var format.
+   */
+  private function composeGlobalMergeVars($campaignDetails) {
+
+    foreach ($campaignDetails as $campaignDetailsCount => $details) {
+
+    }
+
+    return $globalMergeVars;
+  }
+
+  /**
    * Construct digest submissions based on the Mandrill API send-template
    * details.
+   *
+   * @param array $targetCampaigns
+   *   The drupal_nid s of the campaigns that the digest messages need details
+   *   about in order to build the message contents.
    *
    * @return array
    *   Details of all the active campaigns
