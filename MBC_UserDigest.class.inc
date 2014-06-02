@@ -190,17 +190,11 @@ if ($bla) {
     $processedTargetUsers = $targetUsers;
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
 
-      // Remove signup that have matching reportback entries
+      // Remove signups that have matching reportback entries
       $targetUserCampaigns = $targetUser['campaigns'];
       foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
         if (isset($campaignActivity->reportback)) {
-          $removeNID = $campaignActivity->nid;
           unset($targetUserCampaigns[$campaignActivityIndex]);
-          foreach ($campaignActivity as $activityCount => $activity) {
-            if ($activity['nid'] == $removeNID) {
-              unset($targetUserCampaigns[$activityCount]);
-            }
-          }
         }
         else {
           $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
@@ -231,11 +225,24 @@ if ($bla) {
    *   Details of all the active campaigns
    */
   private function getCampaignDetails($targetCampaigns) {
-    
-    
+
+    $campaignDetails = array();
+    foreach ($targetCampaigns as $targetCampaign) {
+
+      $campaignApiUrl = getenv('DS_CAMPAIGNS_API_HOST') . ':' . getenv('DS_CAMPAIGNS_API_PORT') . '/campaign?nid=' . $targetCampaign;
+      $ch = curl_init();
+      curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+      $jsonResult = curl_exec($ch);
+      curl_close($ch);
+      $returned = json_decode($jsonResult);
+      $campaignDetails[] = $returned->results;
+
+    }
+
     return $campaignDetails;
-    
   }
+
   /**
    * Construct digest submissions based on the Mandrill API send-template
    * details.
