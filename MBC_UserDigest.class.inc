@@ -55,6 +55,7 @@ class MBC_UserDigest
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 500;
+  const MAX_CAMPAIGNS = 5;
 
   /**
    * Constructor for MBC_UserDigest
@@ -141,6 +142,7 @@ class MBC_UserDigest
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
 
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
+      // @todo: Needs to be fixed
       // $this->messageBroker->sendAck($messageDetails);
       $messagePayload = json_decode($messageDetails->body);
       $targetUsers[$processedCount] = array(
@@ -172,7 +174,7 @@ class MBC_UserDigest
    * report back entry.
    *
    * @param array $targetUsers
-   *   All of the users and their campaign activity to proess.
+   *   All of the users and their campaign activity to process.
    *
    * @return array $targetUsers
    *   The updated list with entries with report backs removed.
@@ -187,7 +189,7 @@ class MBC_UserDigest
     $processedTargetUsers = $targetUsers;
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
 
-      // Remove signups that have matching reportback entries
+      // Remove signups that have matching report back entries
       $targetUserCampaigns = $targetUser['campaigns'];
       $targetCampaignCount = 0;
       foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
@@ -199,7 +201,7 @@ class MBC_UserDigest
           $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
           $targetCampaignCount++;
         }
-        if ($targetCampaignCount == 5) {
+        if ($targetCampaignCount == self::MAX_CAMPAIGNS) {
           break;
         }
       }
@@ -253,6 +255,7 @@ class MBC_UserDigest
   /**
    * Construct $to array based on Mandrill send-template API specification.
    *
+   * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
    * "to": [
    *   {
    *     "email": "recipient.email@example.com",
@@ -260,6 +263,9 @@ class MBC_UserDigest
    *     "type": "to"
    *   }
    * ],
+   *
+   * "type": "to" - the header type to use for the recipient, defaults to "to"
+   * if not provided oneof(to, cc, bcc)
    *
    * @param array $targetUsers
    *   Details about user to send digest message to.
@@ -273,6 +279,7 @@ class MBC_UserDigest
       $to[] = array(
         'email' => $targetUser['email'],
         'name' => $targetUser['fname'],
+        'to' => 'to',
       );
     }
 
@@ -324,7 +331,10 @@ class MBC_UserDigest
 
     $campaignMarkup = file_get_contents(__DIR__ . '/campaign-markup.inc');
 
+    // Add HTML markup to make the image responsive. Based on markup generated
+    // by the related Mailchimp template.
     $image_campaign_cover_markup = str_replace('alt=""', 'width="264" style="max-width:800px;" class="mcnImage"', $campaign->image_campaign_cover_markup);
+
     $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_MARKUP|*', $image_campaign_cover_markup, $campaignMarkup);
     $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
     $campaignMarkup = str_replace('*|CAMPAIGN_CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
@@ -366,8 +376,8 @@ class MBC_UserDigest
    * ],
    *
    * NOTE: The use of $globalMergeVars value in the $mergeVars submission for
-   * each use is not ideal but necessary. Mandrill currently doesn not support
-   * using global merge var values to customize individual merge var submisisons.
+   * each use is not ideal but necessary. Mandrill currently doesn't support
+   * using global merge var values to customize individual merge var submissions.
    * A feature request has been made to "Chad Morris", developer at Mandrill
    * (2014-06-01).
    *
@@ -426,7 +436,7 @@ class MBC_UserDigest
    * API send-template specification.
    *
    * @param array $to
-   *   List of recepiants for the To <name> part of an email
+   *   List of recipients for the To <name> part of an email
    *
    * @param array $mergeVars
    *   Merge values keyed on the email addresses. Values include the user first
@@ -478,7 +488,7 @@ class MBC_UserDigest
     $mandrill = new Mandrill();
     $templateName = 'mb-digest-v0-5-0';
 
-    // Must be included in submission but is kept blank as the teamplate contents
+    // Must be included in submission but is kept blank as the template contents
     // are managed through the Mailchip/Mandril WYSIWYG interface.
     $templateContent = array(
       array(
