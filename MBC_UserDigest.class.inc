@@ -54,7 +54,8 @@ class MBC_UserDigest
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 100;
+  const BATCH_SIZE = 500;
+  const MAX_CAMPAIGNS = 5;
 
   /**
    * Constructor for MBC_UserDigest
@@ -89,14 +90,8 @@ class MBC_UserDigest
    * Controller for Digest message processing.
    */
   public function generateDigests() {
-    
 
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
-
-    $targetUsers = $this->consumeUserDigestQueue();
+    list($targetUsers, $deliveryTags) = $this->consumeUserDigestQueue();
 
     if ($targetUsers) {
 
@@ -109,16 +104,16 @@ if ($bla) {
       // Build merge_var and gloabal_merge_var values
       $to = $this->composeTo($targetUsers);
       $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
-      $mergeMars = $this->composeMergeVars($targetUsers);
+      $mergeVars = $this->composeMergeVars($targetUsers, $globalMergeVars);
 
       // Assemble and send Mandrill digest message submission
-      $mergeVars = $this->composeDigestSubmission($to, $mergeMars, $globalMergeVars);
+      $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
 
-      $this->submitToMandrill($composedDigestList, $campaignDetails, $mbDeliveryTags);
+      $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
 
     }
     else {
-      echo '------- mbc-user-digest processDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
+      echo '------- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
     }
 
   }
@@ -131,12 +126,6 @@ if ($bla) {
    *   An array of the status of the job
    */
   private function consumeUserDigestQueue() {
-    
-    
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
 
     // Get the status details of the queue by requesting a declare
     list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
@@ -146,16 +135,20 @@ if ($bla) {
     $unackedCount = $status[2];
 
     $messageDetails = '';
+    $deliveryTags = array();
     $targetUsers = array();
     $processedCount = 0;
 
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
+
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
+      // @todo: Needs to be fixed
+      // $this->messageBroker->sendAck($messageDetails);
       $messagePayload = json_decode($messageDetails->body);
       $targetUsers[$processedCount] = array(
         'email' => $messagePayload->email,
         'fname' => $messagePayload->merge_vars->FNAME,
-        'campaigns' => $messagePayload->campaigns
+        'campaigns' => $messagePayload->campaigns,
       );
       if (isset($messagePayload->drupal_uid)) {
         $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
@@ -168,20 +161,20 @@ if ($bla) {
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('consumeUserDigestQueue');
       $this->statHat->reportCount($processedCount);
-      return $targetUsers;
+      return array($targetUsers, $deliveryTags);
     }
     else {
-      $results = FALSE;
+      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
     }
 
   }
-  
+
   /**
    * Process targetUsers entries to remove campaign activities that also have a
    * report back entry.
    *
    * @param array $targetUsers
-   *   All of the users and their campaign activity to proess.
+   *   All of the users and their campaign activity to process.
    *
    * @return array $targetUsers
    *   The updated list with entries with report backs removed.
@@ -190,26 +183,26 @@ if ($bla) {
    *   All of the campaigns referenced in $targetUsers.
    */
   private function processDigestCampaignActivity($targetUsers) {
-    
-    
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
 
     $targetCampaigns = array();
 
     $processedTargetUsers = $targetUsers;
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
 
-      // Remove signups that have matching reportback entries
+      // Remove signups that have matching report back entries
       $targetUserCampaigns = $targetUser['campaigns'];
+      $targetCampaignCount = 0;
       foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
         if (isset($campaignActivity->reportback)) {
           unset($targetUserCampaigns[$campaignActivityIndex]);
+          $targetCampaignCount--;
         }
         else {
           $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
+          $targetCampaignCount++;
+        }
+        if ($targetCampaignCount == self::MAX_CAMPAIGNS) {
+          break;
         }
       }
 
@@ -237,55 +230,60 @@ if ($bla) {
    *   Details of all the active campaigns
    */
   private function getCampaignDetails($targetCampaigns) {
-    
-    
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
 
     $campaignDetails = array();
+    $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      $campaignApiUrl = getenv('DS_CAMPAIGNS_API_HOST') . ':' . getenv('DS_CAMPAIGNS_API_PORT') . '/campaign?nid=' . $targetCampaign;
-      $ch = curl_init();
+      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/campaign?drupal_nid=' . $targetCampaign;
       curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
       $jsonResult = curl_exec($ch);
-      curl_close($ch);
-      $returned = json_decode($jsonResult);
-      $campaignDetails[] = $returned->results;
+      $result = json_decode($jsonResult);
+
+      // Exclude campaigns that don't have cached details in Campaign API
+      if (count($result) != NULL) {
+        $campaignDetails[] = $result;
+      }
 
     }
+    curl_close($ch);
 
     return $campaignDetails;
   }
-  
+
   /**
-   * Construct digest submissions based on the Mandrill API send-template
-   * details.
+   * Construct $to array based on Mandrill send-template API specification.
    *
-   * "merge_vars": [
+   * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
+   * "to": [
    *   {
-   *     "rcpt": "recipient.email@example.com",
-   *     "vars": [
-   *       {
-   *         "name": "merge2",
-   *         "content": "merge2 content"
-   *       }
-   *     ]
+   *     "email": "recipient.email@example.com",
+   *     "name": "Recipient Name",
+   *     "type": "to"
    *   }
    * ],
    *
-   * @param array $to
-   *   The drupal_nid s of the campaigns that the digest messages need details
-   *   about in order to build the message contents.
+   * "type": "to" - the header type to use for the recipient, defaults to "to"
+   * if not provided oneof(to, cc, bcc)
    *
-   * @return array
-   *   Details of all the active campaigns
+   * @param array $targetUsers
+   *   Details about user to send digest message to.
+   *
+   * @return array $to
+   *   $to in Mandrill API structure.
    */
   private function composeTo($targetUsers) {
-    
+
+    foreach ($targetUsers as $targetUser) {
+      $to[] = array(
+        'email' => $targetUser['email'],
+        'name' => $targetUser['fname'],
+        'to' => 'to',
+      );
+    }
+
+    return $to;
   }
 
   /**
@@ -308,17 +306,11 @@ if ($bla) {
    */
   private function composeGlobalMergeVars($campaignDetails) {
 
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
-
     $globalMergeVars = array();
     foreach ($campaignDetails as $campaignDetailsCount => $campaign) {
-      $campaignMarkup = buildCampaignMarkup($campaign);
-      $globalMergeVars[] = array(
-        'name' => 'campaign-' . $campaign['nid'],
-        'content' => $campaignMarkup,
+      $globalMergeVars[$campaign->drupal_nid] = array(
+        'name' => 'campaign-' . $campaign->drupal_nid,
+        'content' => $this->buildCampaignMarkup($campaign),
       );
     }
 
@@ -337,24 +329,38 @@ if ($bla) {
    */
   private function buildCampaignMarkup($campaign) {
 
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
+    $campaignMarkup = file_get_contents(__DIR__ . '/campaign-markup.inc');
 
-    $campaignMarkup = file_get_contents(__DIR__ . 'campaign-markup.inc');
-    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign['CAMPAIGN_IMAGE_URL'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign['CAMPAIGN_TITLE'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_CALL_TO_ACTION|*', $campaign['CAMPAIGN_CALL_TO_ACTION'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_PROBLEM_FACT|*', $campaign['CAMPAIGN_PROBLEM_FACT'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_SOLUTION_FACT|*', $campaign['CAMPAIGN_SOLUTION_FACT'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign['CAMPAIGN_LINK'], $campaignMarkup);
+    // Add HTML markup to make the image responsive. Based on markup generated
+    // by the related Mailchimp template.
+    $image_campaign_cover_markup = str_replace('alt=""', 'width="264" style="max-width:800px;" class="mcnImage"', $campaign->image_campaign_cover_markup);
+
+    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_MARKUP|*', $image_campaign_cover_markup, $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
+
+    $campaign->url = $campaign->url . '#prove';
+    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
+
+    if (isset($campaign->do_it_title)) {
+      $campaignMarkup = str_replace('*|DO_IT_TITLE|*', $campaign->do_it_title, $campaignMarkup);
+      $campaignMarkup = str_replace('*|DO_IT_BODY|*', $campaign->do_it_body, $campaignMarkup);
+    }
+    if (isset($campaign->fact_problem)) {
+      $campaignMarkup = str_replace('*|FACT_PROBLEM|*', $campaign->fact_problem, $campaignMarkup);
+    }
+    if (isset($campaign->fact_solution)) {
+      $campaignMarkup = str_replace('*|FACT_SOLUTION|*', $campaign->fact_solution, $campaignMarkup);
+    }
+
+    // @todo: 
+    // - Add Google Analitics
 
     return $campaignMarkup;
   }
-  
+
   /**
-   * Construct digest submissions based on the Mandrill API send-template
+   * Construct digest merge_var submissions based on the Mandrill API send-template
    * details.
    *
    * "merge_vars": [
@@ -369,35 +375,54 @@ if ($bla) {
    *   }
    * ],
    *
-   * @param array $targetCampaigns
-   *   The drupal_nid s of the campaigns that the digest messages need details
-   *   about in order to build the message contents.
+   * NOTE: The use of $globalMergeVars value in the $mergeVars submission for
+   * each use is not ideal but necessary. Mandrill currently doesn't support
+   * using global merge var values to customize individual merge var submissions.
+   * A feature request has been made to "Chad Morris", developer at Mandrill
+   * (2014-06-01).
+   *
+   * @param array $targetUsers
+   *   The target user details.
+   *
+   * @param array $globalMergeVars
+   *   Markup for each of the possible campaign entries in the digest message.
+   *   Ideally the global_marge_var values could be referenced in the individual
+   *   user merge_var entries but... this is currently not possible. The
+   *   individual marge_var entries must have the complete markup for the
+   *   campaigns of interest.
    *
    * @return array
    *   Details of all the active campaigns
    */
-  private function composeMergeVars($targetUsers) {
-
-$bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
+  private function composeMergeVars($targetUsers, $globalMergeVars) {
 
     $mergeVars = array();
+    $campaignDividerMarkup = file_get_contents(__DIR__ . '/campaign-divider-markup.inc');
+
     foreach ($targetUsers as $targetUser) {
-      foreach ($targetUser['campaigns'] as $campaign) {
-        $targetUser['CAMPAIGNS'] .= 'campaign-' . $campaign['nid'] . "\n";
+      $campaignMergeVars = '';
+      foreach ($targetUser['campaigns'] as $campaignCount => $campaign) {
+        // Only add campaign details for items that content is available - not
+        // expired or available in mb-campaign-api.
+        if (isset($globalMergeVars[$campaign->nid])) {
+          $campaignMergeVars .= $globalMergeVars[$campaign->nid]['content'];
+          if (count($targetUser['campaigns']) - 1 > $campaignCount) {
+            $campaignMergeVars .= $campaignDividerMarkup;
+          }
+        }
+
       }
+
       $mergeVars[] = array(
         'rcpt' => $targetUser['email'],
         'vars' => array(
           0 => array(
             'name' => 'FNAME',
-            'content' => $targetUser['FNAME'],
+            'content' => $targetUser['fname'],
           ),
           1 => array(
             'name' => 'CAMPAIGNS',
-            'content' => $targetUser['CAMPAIGNS'],
+            'content' => $campaignMergeVars,
           ),
         )
       );
@@ -405,133 +430,77 @@ if ($bla) {
 
     return $mergeVars;
   }
-  
+
   /**
-   * Assemble digest message request for Mandrill.
+   * Assemble digest message request for Mandrill submission based on Mandrill
+   * API send-template specification.
    *
    * @param array $to
-   *   ??
-   *   
+   *   List of recipients for the To <name> part of an email
+   *
+   * @param array $mergeVars
+   *   Merge values keyed on the email addresses. Values include the user first
+   *   name and the global merge var values for the campaigns the user is
+   *   active in.
+   *
+   * @param array $globalMergeVars
+   *   Merge values (campaign details) potentially common to all messages.
    */
-  private function composeDigestSubmission($to, $mergeMars, $globalMergeVars) {
-    
+  private function composeDigestSubmission($to, $mergeVars, $globalMergeVars) {
+
     /*
-     
-        "message": {
-        "html": "<p>Example HTML content</p>",
-        "text": "Example text content",
-        "subject": "example subject",
-        "from_email": "message.from_email@example.com",
-        "from_name": "Example Name",
-        "to": [
-            {
-                "email": "recipient.email@example.com",
-                "name": "Recipient Name",
-                "type": "to"
-            }
-        ],
-        "headers": {
-            "Reply-To": "message.reply@example.com"
-        },
-        "important": false,
-        "track_opens": null,
-        "track_clicks": null,
-        "auto_text": null,
-        "auto_html": null,
-        "inline_css": null,
-        "url_strip_qs": null,
-        "preserve_recipients": null,
-        "view_content_link": null,
-        "bcc_address": "message.bcc_address@example.com",
-        "tracking_domain": null,
-        "signing_domain": null,
-        "return_path_domain": null,
-        "merge": true,
-        "global_merge_vars": [
-            {
-                "name": "merge1",
-                "content": "merge1 content"
-            }
-        ],
-        "merge_vars": [
-            {
-                "rcpt": "recipient.email@example.com",
-                "vars": [
-                    {
-                        "name": "merge2",
-                        "content": "merge2 content"
-                    }
-                ]
-            }
-        ],
-        "tags": [
-            "password-resets"
-        ],
-        "subaccount": "customer-123",
-        "google_analytics_domains": [
-            "example.com"
-        ],
-        "google_analytics_campaign": "message.from_email@example.com",
-        "metadata": {
-            "website": "www.example.com"
-        },
-        "recipient_metadata": [
-            {
-                "rcpt": "recipient.email@example.com",
-                "values": {
-                    "user_id": 123456
-                }
-            }
-        ],
-        "attachments": [
-            {
-                "type": "text/plain",
-                "name": "myfile.txt",
-                "content": "ZXhhbXBsZSBmaWxl"
-            }
-        ],
-        "images": [
-            {
-                "type": "image/png",
-                "name": "IMAGECID",
-                "content": "ZXhhbXBsZSBmaWxl"
-            }
-        ]
-    },
-    
-    */
-    
-    $composedDigestSubmission = array(
-      'subject' => '',
-      'from_email' => '',
-      'from_name' => '',
-      'to' => $to,
-      
-      
+     * @todo: Add Google Analytics tracking
+     *
+     * "google_analytics_domains": [
+     *   "example.com"
+     * ],
+     * "google_analytics_campaign": "message.from_email@example.com",
+     * "metadata": {
+     *   "website": "www.example.com"
+     * },
+     */
+    $tags = array(
+      0 => 'digest',
     );
     
+    $composedDigestSubmission = array(
+      'subject' => 'Your weekly DoSomething campaign digest',
+      'from_email' => 'no-reply@dosomething.org',
+      'from_name' => 'DoSomething.org',
+      'to' => $to,
+      'global_merge_vars' => $globalMergeVars,
+      'merge_vars' => $mergeVars,
+      'tags' => $tags,
+    );
+
     return $composedDigestSubmission;
   }
   
   /**
    * Send digest message request to Mandrill.
    *
-   * @param array composedDigestList
-   *   
+   * @param array $composedDigestSubmission
+   *   Submission data formatted to the send-template API guidelines.
    */
-  private function submitToMandrill($campaignDetails, $mbDeliveryTags) {
-    
-    // Use the Mandrill service
+  private function submitToMandrill($composedDigestSubmission) {
+
+    // Send to Mandrill
     $mandrill = new Mandrill();
-    $templateName = 'mb-digest';
-    
-    // Must be included in submission but is kept blank as the teamplate contents
+    $templateName = 'mb-digest-v0-5-0';
+
+    // Must be included in submission but is kept blank as the template contents
     // are managed through the Mailchip/Mandril WYSIWYG interface.
-    $message = '';
+    $templateContent = array(
+      array(
+          'name' => 'main',
+          'content' => ''
+      ),
+    );
 
     // Send message
-    $mandrillResults = $mandrill->messages->sendTemplate($templateName, $composedDigestSubmission, $message);
-    
+    $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
+
+    return $mandrillResults;
   }
   
 }
