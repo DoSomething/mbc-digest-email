@@ -142,7 +142,7 @@ class MBC_UserDigest
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
 
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      // @todo: Needs to be fixed
+      // @todo: AckBacks not working - fix.
       // $this->messageBroker->sendAck($messageDetails);
       $messagePayload = json_decode($messageDetails->body);
       $targetUsers[$processedCount] = array(
@@ -192,21 +192,36 @@ class MBC_UserDigest
       // Remove signups that have matching report back entries
       $targetUserCampaigns = $targetUser['campaigns'];
       $targetCampaignCount = 0;
+      $lastSignup = 0;
       foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
         if (isset($campaignActivity->reportback)) {
           unset($targetUserCampaigns[$campaignActivityIndex]);
           $targetCampaignCount--;
         }
         else {
-          $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
+          // Order campaigns by signup timestamp, oldest first
+          if ($campaignActivity->signup < $lastSignup) {
+            array_unshift($targetCampaigns, $campaignActivity);
+          }
+          else {
+            $targetCampaigns[$campaignActivityIndex] = $campaignActivity;
+          }
+          $lastSignup = $campaignActivity->signup;
           $targetCampaignCount++;
-        }
-        if ($targetCampaignCount == self::MAX_CAMPAIGNS) {
-          break;
         }
       }
 
-      // Remove user that does not have campaign signups
+      // Limit the number of campaigns in message to MAX_CAMPAIGNS
+      // @todo: Add ordering by:
+      // 1. Staff pick
+      // 2. High season
+      // 3. Signup date, decending
+      // - Move to seperate funciton
+      if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
+          $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
+      }
+
+      // Only include users that have campaign signups
       if (count($targetUserCampaigns) > 0) {
         $processedTargetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
       }
@@ -235,7 +250,7 @@ class MBC_UserDigest
     $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/campaign?drupal_nid=' . $targetCampaign;
+      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/campaign?drupal_nid=' . $targetCampaign->nid;
       curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
       $jsonResult = curl_exec($ch);
