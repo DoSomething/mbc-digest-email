@@ -187,39 +187,34 @@ class MBC_UserDigest
     $targetCampaigns = array();
 
     $processedTargetUsers = $targetUsers;
+    // @todo: Move all campaign processing in this loop to separate function
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
+      $targetUserCampaigns = $targetUser['campaigns'];
 
       // Remove signups that have matching report back entries
-      $targetUserCampaigns = $targetUser['campaigns'];
-      $targetCampaignCount = 0;
-      $lastSignup = 0;
       foreach($targetUser['campaigns'] as $campaignActivityIndex => $campaignActivity) {
         if (isset($campaignActivity->reportback)) {
           unset($targetUserCampaigns[$campaignActivityIndex]);
-          $targetCampaignCount--;
         }
         else {
-          // Order campaigns by signup timestamp, oldest first
-          if ($campaignActivity->signup < $lastSignup) {
-            array_unshift($targetCampaigns, $campaignActivity);
-          }
-          else {
-            $targetCampaigns[$campaignActivityIndex] = $campaignActivity;
-          }
-          $lastSignup = $campaignActivity->signup;
-          $targetCampaignCount++;
+          $targetCampaigns[$campaignActivity->nid] = $campaignActivity->nid;
         }
       }
 
       // Limit the number of campaigns in message to MAX_CAMPAIGNS
-      // @todo: Add ordering by:
-      // 1. Staff pick
-      // 2. High season
-      // 3. Signup date, decending
-      // - Move to seperate funciton
       if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
           $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
       }
+
+      // @todo: Add ordering by:
+      // 1. Staff pick
+      // 2. High season
+
+      // 3. Signup date, descending
+      // Anomalous functions in PHP, who knew - cool!
+      usort($targetUserCampaigns, function($a, $b) {
+        return $a->signup - $b->signup;
+      });
 
       // Only include users that have campaign signups
       if (count($targetUserCampaigns) > 0) {
