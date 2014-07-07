@@ -5,7 +5,7 @@
         <tbody><tr>
           <td class="mcnCaptionRightImageContent" valign="top">
             <a href="*|CAMPAIGN_LINK|*" title="" class="" target="_blank">
-              *|CAMPAIGN_IMAGE_MARKUP|*
+              <img src="*|CAMPAIGN_IMAGE_URL|*" class="mcnImage">
             </a>
           </td>
         </tr></tbody>
@@ -15,8 +15,9 @@
           <td valign="top" class="mcnTextContent">
             <center>
               <h2 class="null" dir="ltr" style="text-align: left;"><span style="font-size:24px">*|CAMPAIGN_TITLE|*</span></h2>
-              <h3 class="null" dir="ltr" style="text-align: left;"><font size="4">*|DO_IT_TITLE|*</font></h3>
+              <h3 class="null" dir="ltr" style="text-align: left;"><font size="4">*|CALL_TO_ACTION|*</font></h3>
               <p dir="ltr" style="text-align: left;">*|DO_IT_BODY|*</p>
+              <p dir="ltr" style="text-align: left;"><strong>*|FAQ_HEADER|*</strong>*|FAQ_BODY|*</p>
             </center>
             <center>
               <table border="0" cellpadding="0" cellspacing="0" class="emailButton" style="border-radius:3px; background-color:#23b7fb;" mc:edit="buttonlink">

@@ -99,7 +99,8 @@ class MBC_UserDigest
       list($targetUsers, $targetCampaigns) = $this->processDigestCampaignActivity($targetUsers);
 
       // Collect active campaign details
-      $campaignDetails = $this->getCampaignDetails($targetCampaigns);
+      $campaigns = $this->getCampaignDetails($targetCampaigns);
+      $campaignDetails = $this->filterCampaigns($campaigns);
 
       // Build merge_var and gloabal_merge_var values
       $to = $this->composeTo($targetUsers);
@@ -245,19 +246,82 @@ class MBC_UserDigest
     $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/campaign?drupal_nid=' . $targetCampaign->nid;
+      // curl http://staging.beta.dosomething.org/api/v1/content/362  -H "Content-type: application/json" --header "Accept: application/json"
+      // $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/api/v1/content/' . $targetCampaign;
+      // No port when using beta.stage
+      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . '/api/v1/content/' . $targetCampaign;
+
       curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'Content-type: application/json',
+        'Accept: application/json'
+      ));
       $jsonResult = curl_exec($ch);
       $result = json_decode($jsonResult);
 
       // Exclude campaigns that don't have cached details in Campaign API
-      if (count($result) != NULL) {
+      if ($result != NULL) {
         $campaignDetails[] = $result;
       }
 
     }
     curl_close($ch);
+
+    return $campaignDetails;
+  }
+
+  /**
+   * Process campaigns, remove based on digest content rules.
+   *
+   * @param array $campaigns
+   *   Details of each campaign collected from the Drupal campaign API.
+   *
+   * @return array $campaignDetails
+   *   Details of all the active campaigns
+   */
+  private function filterCampaigns($campaigns) {
+
+    $campaignCount = 0;
+    foreach ($campaigns as $campaign) {
+      if ((isset($campaign->status) && $campaign->status != 'closed') &&
+          (isset($campaign->type) && $campaign->type == 'campaign') &&
+          (isset($campaign->image_cover->src))) {
+
+        $campaignDetails[$campaignCount] = array(
+          'drupal_nid' => $campaign->nid,
+          'title' => $campaign->title,
+          'is_staff_pick' => $campaign->is_staff_pick,
+          'url' => 'http://www.dosomething.org/node/' . $campaign->nid . '#prove',
+          'image_campaign_cover' => $campaign->image_cover->src,
+          'high_season_start' => $campaign->high_season_start,
+          'high_season_end' => $campaign->high_season_end,
+          'low_season_start' => $campaign->low_season_start,
+          'low_season_end' => $campaign->low_season_end,
+          'starter_statement' => $campaign->starter_statement,
+          'solution_copy' => $campaign->solution_copy,
+          'solution_support' => $campaign->solution_support,
+          'call_to_action' => $campaign->call_to_action,
+          'fact_problem' => $campaign->fact_problem->fact,
+        );
+
+        if (isset($campaign->image_header->src)) {
+          $campaignDetails[$campaignCount]['image_campaign_header'] = $campaign->image_header->src;
+        }
+        if (isset($campaign->faq[0]->header)) {
+          $campaignDetails[$campaignCount]['faq_header'] = $campaign->faq[0]->header;
+        }
+        if (isset($campaign->faq[0]->copy)) {
+          $campaignDetails[$campaignCount]['faq_copy'] = strip_tags($campaign->faq[0]->copy);
+        }
+        if (isset($campaign->fact_solution->fact)) {
+          $campaignDetails[$campaignCount]['fact_solution'] = $campaign->fact_solution->fact;
+        }
+
+        $campaignCount++;
+      }
+
+    }
 
     return $campaignDetails;
   }
@@ -318,8 +382,8 @@ class MBC_UserDigest
 
     $globalMergeVars = array();
     foreach ($campaignDetails as $campaignDetailsCount => $campaign) {
-      $globalMergeVars[$campaign->drupal_nid] = array(
-        'name' => 'campaign-' . $campaign->drupal_nid,
+      $globalMergeVars[$campaign['drupal_nid']] = array(
+        'name' => 'campaign-' . $campaign['drupal_nid'],
         'content' => $this->buildCampaignMarkup($campaign),
       );
     }
@@ -341,27 +405,38 @@ class MBC_UserDigest
 
     $campaignMarkup = file_get_contents(__DIR__ . '/campaign-markup.inc');
 
-    // Add HTML markup to make the image responsive. Based on markup generated
-    // by the related Mailchimp template.
-    $image_campaign_cover_markup = str_replace('alt=""', 'width="264" style="max-width:800px;" class="mcnImage"', $campaign->image_campaign_cover_markup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign['image_campaign_cover'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign['title'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign['url'], $campaignMarkup);
 
-    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_MARKUP|*', $image_campaign_cover_markup, $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
-
-    $campaign->url = $campaign->url . '#prove';
-    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
-
-    if (isset($campaign->do_it_title)) {
-      $campaignMarkup = str_replace('*|DO_IT_TITLE|*', $campaign->do_it_title, $campaignMarkup);
-      $campaignMarkup = str_replace('*|DO_IT_BODY|*', $campaign->do_it_body, $campaignMarkup);
+    if (!isset($campaign['do_it_title'])) {
+      $campaign['do_it_title'] = '';
     }
-    if (isset($campaign->fact_problem)) {
-      $campaignMarkup = str_replace('*|FACT_PROBLEM|*', $campaign->fact_problem, $campaignMarkup);
+    if (!isset($campaign['do_it_body'])) {
+      $campaign['do_it_body'] = '';
     }
-    if (isset($campaign->fact_solution)) {
-      $campaignMarkup = str_replace('*|FACT_SOLUTION|*', $campaign->fact_solution, $campaignMarkup);
+    if (!isset($campaign['fact_problem'])) {
+      $campaign['fact_problem'] = '';
     }
+    if (!isset($campaign['fact_solution'])) {
+      $campaign['fact_solution'] = '';
+    }
+    if (!isset($campaign['call_to_action'])) {
+      $campaign['call_to_action'] = '';
+    }
+    if (!isset($campaign['faq_header'])) {
+      $campaign['faq_header'] = '';
+    }
+    if (!isset($campaign['faq_body'])) {
+      $campaign['faq_body'] = '';
+    }
+    $campaignMarkup = str_replace('*|DO_IT_TITLE|*', $campaign['do_it_title'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|DO_IT_BODY|*', $campaign['do_it_body'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|FACT_PROBLEM|*', $campaign['fact_problem'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|FACT_SOLUTION|*', $campaign['fact_solution'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|FAQ_HEADER|*', $campaign['faq_header'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|FAQ_BODY|*', ' - ' . $campaign['faq_body'], $campaignMarkup);
 
     // @todo: 
     // - Add Google Analitics
@@ -410,6 +485,7 @@ class MBC_UserDigest
     $campaignDividerMarkup = file_get_contents(__DIR__ . '/campaign-divider-markup.inc');
 
     foreach ($targetUsers as $targetUser) {
+
       $campaignMergeVars = '';
       foreach ($targetUser['campaigns'] as $campaignCount => $campaign) {
         // Only add campaign details for items that content is available - not
@@ -420,22 +496,25 @@ class MBC_UserDigest
             $campaignMergeVars .= $campaignDividerMarkup;
           }
         }
-
       }
 
-      $mergeVars[] = array(
-        'rcpt' => $targetUser['email'],
-        'vars' => array(
-          0 => array(
-            'name' => 'FNAME',
-            'content' => $targetUser['fname'],
-          ),
-          1 => array(
-            'name' => 'CAMPAIGNS',
-            'content' => $campaignMergeVars,
-          ),
-        )
-      );
+      // Skip entries that result in in empty campaign listings.
+      if ($campaignMergeVars != '') {
+        $mergeVars[] = array(
+          'rcpt' => $targetUser['email'],
+          'vars' => array(
+            0 => array(
+              'name' => 'FNAME',
+              'content' => $targetUser['fname'],
+            ),
+            1 => array(
+              'name' => 'CAMPAIGNS',
+              'content' => $campaignMergeVars,
+            ),
+          )
+        );
+      }
+
     }
 
     return $mergeVars;
