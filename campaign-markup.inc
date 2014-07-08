@@ -17,7 +17,7 @@
               <h2 class="null" dir="ltr" style="text-align: left;"><span style="font-size:24px">*|CAMPAIGN_TITLE|*</span></h2>
               <h3 class="null" dir="ltr" style="text-align: left;"><font size="4">*|CALL_TO_ACTION|*</font></h3>
               <p dir="ltr" style="text-align: left;">*|DO_IT_BODY|*</p>
-              <p dir="ltr" style="text-align: left;"><strong>*|FAQ_HEADER|*</strong>*|FAQ_BODY|*</p>
+              <p dir="ltr" style="text-align: left;"><strong>*|TIP_TITLE|*</strong>&nbsp;*|DURING_TIP|*</p>
             </center>
             <center>
               <table border="0" cellpadding="0" cellspacing="0" class="emailButton" style="border-radius:3px; background-color:#23b7fb;" mc:edit="buttonlink">
