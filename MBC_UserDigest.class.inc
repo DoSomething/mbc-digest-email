@@ -449,36 +449,53 @@ class MBC_UserDigest
   private function filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars) {
 
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
-
       $targetUserCampaigns = $targetUser['campaigns'];
 
-      // Remove entries that don't have campaign details
-      foreach ($targetUserCampaigns as $campaignCount => $campaign) {
-        if (!isset($globalMergeVars[$campaign->nid])) {
-          unset($targetUserCampaigns[$campaignCount]);
+      $staffPicks = array();
+      $nonStaffPicks = array();
+      foreach ($targetUserCampaigns as $targetUserCampaignCount => $targetUserCampaign) {
+
+        // Skip any campaigns where the nid is invalid
+        if (!isset($globalMergeVars[$targetUserCampaign->nid])) {
+          continue;
         }
+
+        foreach ($campaignDetails as $campaignDetailIndex => $campaignDetail) {
+
+          // Check if the nid's match
+          if (isset($targetUserCampaign->nid) &&
+              isset($campaignDetail['drupal_nid']) &&
+              $targetUserCampaign->nid == $campaignDetail['drupal_nid']) {
+
+            if (isset($campaignDetail['is_staff_pick']) &&
+                $campaignDetail['is_staff_pick'] == 'true') {
+              $staffPicks[] = $targetUserCampaign;
+            }
+            else {
+              $nonStaffPicks[] = $targetUserCampaign;
+            }
+
+            break;
+          }
+
+        }
+
       }
 
-      // Signup date, descending
-      // Anonymous functions in PHP, who knew - cool!
-      usort($targetUserCampaigns, function($a, $b) {
+      // @todo: Add sort by high season
+
+      // Sort staff picks by date
+      usort($staffPicks, function($a, $b) {
         return $a->signup - $b->signup;
       });
 
-      // @todo: Add ordering by:
-      // Sort by High season first
+      // Sort non-staff picks by date
+      usort($nonStaffPicks, function($a, $b) {
+        return $a->signup - $b->signup;
+      });
 
-      // Most important, Staff picks - at top
-      foreach ($targetUserCampaigns as $targetUserCampaignCount => $targetUserCampaign) {
-        foreach($campaignDetails as $campaignDetailIndex => $campaignDetail) {
-          if ((isset($targetUserCampaign->nid) && isset($campaignDetail['drupal_nid']) &&
-            $targetUserCampaign->nid == $campaignDetail['drupal_nid']) &&
-              (isset($campaignDetail['is_staff_pick']) && $campaignDetail['is_staff_pick'] == 'true')) {
-            array_unshift($targetUserCampaigns, $targetUserCampaigns[$targetUserCampaignCount]);
-            unset($targetUserCampaigns[$targetUserCampaignCount + 1]);
-          }
-        }
-      }
+      // Append the non-staff pick campaigns onto the end of the staff pick campaigns
+      $targetUserCampaigns = $staffPicks + $nonStaffPicks;
 
       // Limit the number of campaigns in message to MAX_CAMPAIGNS
       if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
