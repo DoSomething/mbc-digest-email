@@ -575,7 +575,7 @@ class MBC_UserDigest
 
     // Send to Mandrill
     $mandrill = new Mandrill();
-    $templateName = 'mb-digest-v0-5-0';
+    $templateName = 'mb-digest-v0-5-1';
 
     // Must be included in submission but is kept blank as the template contents
     // are managed through the Mailchip/Mandril WYSIWYG interface.
