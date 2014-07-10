@@ -758,7 +758,7 @@
 																  <table align="left" border="0" cellpadding="0" cellspacing="0" width="600" class="mcnTextContentContainer">
 																		<tbody><tr>
 																		  <td valign="top" class="mcnTextContent" style="padding-top:9px; padding-right: 18px; padding-bottom: 9px; padding-left: 18px;">
-																				<em>Copyright © *|CURRENT_YEAR|* <a href="https://www.dosomething.org/">DoSomething.org</a>, All rights reserved.</em><br>
+																				<em>Copyright © *|CURRENT_YEAR|* <a href="https://www.dosomething.org/" style="color: #23b7fb; text-decoration: none;">DoSomething.org</a>, All rights reserved.</em><br>
 																				<a class="utilityLink" href="*|UNSUB|*">unsubscribe from this list</a>
 																		  </td>
 																		</tr></tbody>
