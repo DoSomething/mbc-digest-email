@@ -100,12 +100,13 @@ class MBC_UserDigest
 
       // Collect active campaign details
       $campaigns = $this->getCampaignDetails($targetCampaigns);
-      $campaignDetails = $this->filterCampaigns($campaigns);
+      $campaignDetails = $this->gatherCampaigns($campaigns);
 
       // Build merge_var and gloabal_merge_var values
-      $to = $this->composeTo($targetUsers);
       $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
-      $mergeVars = $this->composeMergeVars($targetUsers, $globalMergeVars);
+      $targetUsers = $this->filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars);
+      list($mergeVars, $targetUsers) = $this->composeMergeVars($targetUsers, $globalMergeVars);
+      $to = $this->composeTo($targetUsers);
 
       // Assemble and send Mandrill digest message submission
       $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
@@ -202,21 +203,6 @@ class MBC_UserDigest
         }
       }
 
-      // Limit the number of campaigns in message to MAX_CAMPAIGNS
-      if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
-          $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
-      }
-
-      // @todo: Add ordering by:
-      // 1. Staff pick
-      // 2. High season
-
-      // 3. Signup date, descending
-      // Anomalous functions in PHP, who knew - cool!
-      usort($targetUserCampaigns, function($a, $b) {
-        return $a->signup - $b->signup;
-      });
-
       // Only include users that have campaign signups
       if (count($targetUserCampaigns) > 0) {
         $processedTargetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
@@ -246,9 +232,6 @@ class MBC_UserDigest
     $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      // curl http://staging.beta.dosomething.org/api/v1/content/362  -H "Content-type: application/json" --header "Accept: application/json"
-      // $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . ':' . getenv('DS_CAMPAIGN_API_PORT') . '/api/v1/content/' . $targetCampaign;
-      // No port when using beta.stage
       $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . '/api/v1/content/' . $targetCampaign;
 
       curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
@@ -280,11 +263,11 @@ class MBC_UserDigest
    * @return array $campaignDetails
    *   Details of all the active campaigns
    */
-  private function filterCampaigns($campaigns) {
+  private function gatherCampaigns($campaigns) {
 
     $campaignCount = 0;
     foreach ($campaigns as $campaign) {
-      if ((isset($campaign->status) && $campaign->status != 'closed') &&
+      if ((isset($campaign->status) && $campaign->status == 'active') &&
           (isset($campaign->type) && $campaign->type == 'campaign') &&
           (isset($campaign->image_cover->src))) {
 
@@ -308,14 +291,14 @@ class MBC_UserDigest
         if (isset($campaign->image_header->src)) {
           $campaignDetails[$campaignCount]['image_campaign_header'] = $campaign->image_header->src;
         }
-        if (isset($campaign->faq[0]->header)) {
-          $campaignDetails[$campaignCount]['faq_header'] = $campaign->faq[0]->header;
-        }
-        if (isset($campaign->faq[0]->copy)) {
-          $campaignDetails[$campaignCount]['faq_copy'] = strip_tags($campaign->faq[0]->copy);
-        }
         if (isset($campaign->fact_solution->fact)) {
           $campaignDetails[$campaignCount]['fact_solution'] = $campaign->fact_solution->fact;
+        }
+        if (isset($campaign->step_pre[0]->header)) {
+          $campaignDetails[$campaignCount]['during_tip_header'] = $campaign->step_pre[0]->header;
+        }
+        if (isset($campaign->step_pre[0]->copy)) {
+          $campaignDetails[$campaignCount]['during_tip'] = strip_tags($campaign->step_pre[0]->copy);
         }
 
         $campaignCount++;
@@ -353,7 +336,7 @@ class MBC_UserDigest
       $to[] = array(
         'email' => $targetUser['email'],
         'name' => $targetUser['fname'],
-        'to' => 'to',
+        'to' => 'cc',
       );
     }
 
@@ -424,24 +407,105 @@ class MBC_UserDigest
     if (!isset($campaign['call_to_action'])) {
       $campaign['call_to_action'] = '';
     }
-    if (!isset($campaign['faq_header'])) {
-      $campaign['faq_header'] = '';
+    if (!isset($campaign['during_tip_header'])) {
+      $campaign['during_tip_header'] = '';
     }
-    if (!isset($campaign['faq_body'])) {
-      $campaign['faq_body'] = '';
+    $campaign['tip_title'] = 'Tip from the team:';
+    if (!isset($campaign['during_tip'])) {
+      $campaign['tip_title'] = '';
+      $campaign['during_tip'] = '';
     }
+
     $campaignMarkup = str_replace('*|DO_IT_TITLE|*', $campaign['do_it_title'], $campaignMarkup);
     $campaignMarkup = str_replace('*|DO_IT_BODY|*', $campaign['do_it_body'], $campaignMarkup);
     $campaignMarkup = str_replace('*|FACT_PROBLEM|*', $campaign['fact_problem'], $campaignMarkup);
     $campaignMarkup = str_replace('*|FACT_SOLUTION|*', $campaign['fact_solution'], $campaignMarkup);
     $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|FAQ_HEADER|*', $campaign['faq_header'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|FAQ_BODY|*', ' - ' . $campaign['faq_body'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|DURING_TIP_HEADER|*', $campaign['during_tip_header'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['tip_title'], $campaignMarkup);
 
     // @todo: 
     // - Add Google Analitics
 
     return $campaignMarkup;
+  }
+
+  /**
+   * Filter the order in which campaigns are presented.
+   *
+   * @param array $targetUsers
+   *   User details including the campaigns they're signed up for.
+   *
+   * @param array $campaignDetails
+   *   User details including the campaigns they're signed up for.
+   *
+   * @param array $globalMergeVars
+   *   Details about specific .
+   *
+   * @return array $targetUsers
+   *   The filter list of the user and their campaigns based on the filter rules.
+   */
+  private function filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars) {
+
+    foreach ($targetUsers as $targetUserIndex => $targetUser) {
+      $targetUserCampaigns = $targetUser['campaigns'];
+
+      $staffPicks = array();
+      $nonStaffPicks = array();
+      foreach ($targetUserCampaigns as $targetUserCampaignCount => $targetUserCampaign) {
+
+        // Skip any campaigns where the nid is invalid
+        if (!isset($globalMergeVars[$targetUserCampaign->nid])) {
+          continue;
+        }
+
+        foreach ($campaignDetails as $campaignDetailIndex => $campaignDetail) {
+
+          // Check if the nid's match
+          if (isset($targetUserCampaign->nid) &&
+              isset($campaignDetail['drupal_nid']) &&
+              $targetUserCampaign->nid == $campaignDetail['drupal_nid']) {
+
+            if (isset($campaignDetail['is_staff_pick']) &&
+                $campaignDetail['is_staff_pick'] == 'true') {
+              $staffPicks[] = $targetUserCampaign;
+            }
+            else {
+              $nonStaffPicks[] = $targetUserCampaign;
+            }
+
+            break;
+          }
+
+        }
+
+      }
+
+      // @todo: Add sort by high season
+
+      // Sort staff picks by date
+      usort($staffPicks, function($a, $b) {
+        return $a->signup - $b->signup;
+      });
+
+      // Sort non-staff picks by date
+      usort($nonStaffPicks, function($a, $b) {
+        return $a->signup - $b->signup;
+      });
+
+      // Append the non-staff pick campaigns onto the end of the staff pick campaigns
+      $targetUserCampaigns = $staffPicks + $nonStaffPicks;
+
+      // Limit the number of campaigns in message to MAX_CAMPAIGNS
+      if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
+          $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
+      }
+
+      $targetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
+    }
+
+    return $targetUsers;
   }
 
   /**
@@ -484,7 +548,7 @@ class MBC_UserDigest
     $mergeVars = array();
     $campaignDividerMarkup = file_get_contents(__DIR__ . '/campaign-divider-markup.inc');
 
-    foreach ($targetUsers as $targetUser) {
+    foreach ($targetUsers as $targetUserIndex => $targetUser) {
 
       $campaignMergeVars = '';
       foreach ($targetUser['campaigns'] as $campaignCount => $campaign) {
@@ -514,10 +578,13 @@ class MBC_UserDigest
           )
         );
       }
+      else {
+        unset($targetUsers[$targetUserIndex]);
+      }
 
     }
 
-    return $mergeVars;
+    return array($mergeVars, $targetUsers);
   }
 
   /**
@@ -551,12 +618,13 @@ class MBC_UserDigest
     $tags = array(
       0 => 'digest',
     );
-    
+
     $composedDigestSubmission = array(
       'subject' => 'Your weekly DoSomething campaign digest',
       'from_email' => 'no-reply@dosomething.org',
       'from_name' => 'DoSomething.org',
       'to' => $to,
+      'bcc_address' => 'dlee@dosomething.org',
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $mergeVars,
       'tags' => $tags,
