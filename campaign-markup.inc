@@ -1,3 +1,4 @@
+
 <table border="0" cellpadding="0" cellspacing="0" class="mcnCaptionRightContentOuter" width="100%">
   <tbody><tr>
     <td valign="top" class="mcnCaptionRightContentInner" style="padding:0 9px ;">
@@ -35,4 +36,3 @@
     </td>
   </tr></tbody>
 </table>
-	
