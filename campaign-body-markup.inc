@@ -259,6 +259,14 @@
 			/*@editable*/font-weight:bold;
 			/*@editable*/text-decoration:none;
 		}
+		table.mcnCaptionRightContentOuter{
+			padding:9px;
+			background-color:fuchsia;
+		}
+		td.mcnCaptionRightContentInner{
+			padding:0 9px;
+			background-color:pink;
+		}
 	/*
 	@tab Columns
 	@section column style
@@ -602,7 +610,7 @@
             <td align="center" valign="top" id="bodyCell">
 
               <!-- BEGIN TEMPLATE // -->
-              <table border="0" cellpadding="0" cellspacing="0" width="600" id="templateContainer">
+              <table border="0" cellpadding="0" cellspacing="0" width="600" id="templateContainer" style="background-color: #ffffff;">
                 <tr>
                   <td align="center" valign="top">
 
@@ -621,9 +629,7 @@
 																		<tbody>
 																			<tr> 
 																				<td align="left" valign="top" class="mcnTextContent" style="padding-top:9px; padding-left:18px; padding-bottom:9px; padding-right:0;">
-																					<div dir="ltr">
-																						Time flies, don't it?
-																					</div>
+																					<div dir="ltr">Here’s how to crush it -- even harder than you already are.</div>
 																				</td>
 																				<td align="right" valign="top" class="mcnTextContent" style="padding-top:9px; padding-right:18px; padding-bottom:9px; padding-left:0;">
 																					<a href="http://dosomething.org" style="text-align: right;" target="_blank"><img align="none" height="35" src="https://gallery.mailchimp.com/47b90314b0f78c04132888344/images/DoSomething_logo_transparent.png" style="opacity: 0.9; width: 44px; height: 35px; float: right; margin: 0px;" width="44"></a>
@@ -659,11 +665,11 @@
 																	<table align="left" border="0" cellpadding="0" cellspacing="0" width="600" class="mcnBoxedTextContentContainer">
 																		<tbody><tr>
 																			<td style="padding-top:9px; padding-bottom:9px;">
-																			<table border="0" cellpadding="18" cellspacing="0" class="mcnTextContentContainer" width="100%" style="background-color: #4E2B63;">
+																				<table border="0" cellpadding="18" cellspacing="0" class="mcnTextContentContainer" width="100%" style="background-color:#4e2b63">
 																					<tbody><tr>
-																						<td valign="top" class="mcnTextContent mbHeader">
-																							<h2 style="margin: 0 !important;"><span style="color: white !important; font-size: 34px !important;">You're crushing it *|FNAME|*!</span></h2>
-																							<span style="color: white; font-size: 12px !important;">Keep up with the campaigns you signed up for and tell us when you've finished!</span>
+																						<td valign="top" class="mcnTextContent" style="color: white;">
+																							<h2 style="margin: 0;"><span style="color: white; font-size: 34px;">Ready to rock your campaigns?</span></h2>
+																							You signed up for these campaigns. Score! Now use our pro tips to rock them and send pics of your impact.
 																						</td>
 																					</tr></tbody>
 																				</table>
@@ -687,7 +693,7 @@
                     <!-- BEGIN BODY // -->
                     <table border="0" cellpadding="0" cellspacing="0" width="600" id="templateBody">
                       <tr>
-                        <td valign="top" class="bodyContainer">
+                        <td valign="top" class="bodyContainer" style="padding: 0 18px;">
 
 												  *|CAMPAIGNS|*
 
