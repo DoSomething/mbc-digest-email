@@ -620,11 +620,11 @@ class MBC_UserDigest
     );
 
     $composedDigestSubmission = array(
-      'subject' => 'Your weekly DoSomething campaign digest',
-      'from_email' => 'no-reply@dosomething.org',
+      'subject' => $mergeVars[0]['vars'][0]['content'] . '\'s weekly DoSomething.org campaign digest',
+      'from_email' => 'help@dosomething.org ',
       'from_name' => 'DoSomething.org',
       'to' => $to,
-      'bcc_address' => 'dlee@dosomething.org',
+ //     'bcc_address' => 'dlee@dosomething.org',
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $mergeVars,
       'tags' => $tags,
