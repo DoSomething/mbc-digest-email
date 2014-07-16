@@ -261,11 +261,9 @@
 		}
 		table.mcnCaptionRightContentOuter{
 			padding:9px;
-			background-color:fuchsia;
 		}
 		td.mcnCaptionRightContentInner{
 			padding:0 9px;
-			background-color:pink;
 		}
 	/*
 	@tab Columns
