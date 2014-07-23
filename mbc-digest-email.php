@@ -45,7 +45,6 @@ $config = array(
   ),
 );
 $settings = array(
-  'mandrill' => '',
   'stathat_ez_key' => getenv("STATHAT_EZKEY"),
 );
 

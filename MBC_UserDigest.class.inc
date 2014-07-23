@@ -83,7 +83,7 @@ class MBC_UserDigest
 
     // Stathat
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
-    $this->statHat->setIsProduction(FALSE);
+    $this->statHat->setIsProduction(TRUE);
   }
 
   /**
@@ -144,8 +144,12 @@ class MBC_UserDigest
     while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
 
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-      // @todo: AckBacks not working - fix.
+
+      // @todo: The channel details are missing when messageBroker->sendAck is
+      // called. Need to restore sendAck functionality in messagebroker-phplib
       // $this->messageBroker->sendAck($messageDetails);
+      $this->channel->basic_ack($messageDetails->delivery_info['delivery_tag']);
+
       $messagePayload = json_decode($messageDetails->body);
       $targetUsers[$processedCount] = array(
         'email' => $messagePayload->email,
@@ -584,6 +588,7 @@ class MBC_UserDigest
 
     }
 
+    echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', "\n";
     return array($mergeVars, $targetUsers);
   }
 
@@ -620,11 +625,12 @@ class MBC_UserDigest
     );
 
     $composedDigestSubmission = array(
-    'subject' => '*|FNAME|*\'s weekly DoSomething.org campaign digest',
-    'from_email' => 'help@dosomething.org',
-    'from_name' => 'DoSomething.org',
+//    'subject' => '*|FNAME|*\'s weekly DoSomething.org campaign digest',
+      'subject' => 'Introducing your new campaign digest!',
+      'from_email' => 'help@dosomething.org',
+      'from_name' => 'DoSomething.org',
       'to' => $to,
-    //  'bcc_address' => 'dlee@dosomething.org',
+//      'bcc_address' => 'mlidey@dosomething.org',
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $mergeVars,
       'tags' => $tags,
