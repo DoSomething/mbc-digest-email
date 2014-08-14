@@ -48,6 +48,7 @@ $settings = array(
   'stathat_ez_key' => getenv("STATHAT_EZKEY"),
 );
 
+
 echo '------- mbc-user-digest START: ' . date('D M j G:i:s T Y') . ' -------', "\n";
 
 // Kick off
