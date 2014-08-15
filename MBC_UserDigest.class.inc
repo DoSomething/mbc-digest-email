@@ -624,13 +624,33 @@ class MBC_UserDigest
       0 => 'digest',
     );
 
+    $subjects = array(
+      'Your weekly DoSomething campaign digest',
+      'Your weekly DoSomething.org campaign roundup!',
+      'A weekly campaign digest just for you!',
+      'Your weekly campaign digest: ' . date('F j'),
+      date('F j') . ': Your weekly campaign digest!',
+      'Tips for your DoSomething.org campaigns!',
+      'Comin\' atcha: tips for your DoSomething.org campaign!',
+      '*|FNAME|* - It\'s your ' . date('F j') . ' campaign digest',
+      'Just for you: DoSomething.org campaign tips',
+      'Your weekly campaign tips from DoSomething.org',
+      date('F j') . ': campaign tips from DoSomething.org',
+      'You signed up for campaigns. Here\'s how to rock them!',
+      'Tips for you (and only you!)',
+      'Ready for your weekly campaign tips?',
+      'Your weekly campaign tips: comin\' atcha!',
+      'Fresh out the oven (just for you!)',
+    );
+    // Sequenilly select an item from the list of subjects, a different one
+    // every week and start from the top once the end of the list is reached
+    $subjectCount = date('W') - (round(date('W') / count($subjects)) * count($subjects));
+
     $composedDigestSubmission = array(
-//    'subject' => '*|FNAME|*\'s weekly DoSomething.org campaign digest',
-      'subject' => 'Introducing your new campaign digest!',
+      'subject' => $subjects[$subjectCount],
       'from_email' => 'help@dosomething.org',
       'from_name' => 'DoSomething.org',
       'to' => $to,
-//      'bcc_address' => 'mlidey@dosomething.org',
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $mergeVars,
       'tags' => $tags,
