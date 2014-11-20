@@ -120,7 +120,7 @@ class MBC_UserDigest
 
     }
     else {
-      echo '------- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
+      echo '------- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -175,7 +175,7 @@ class MBC_UserDigest
       return array($targetUsers, $deliveryTags);
     }
     else {
-      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', "\n";
+      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -221,6 +221,8 @@ class MBC_UserDigest
       }
 
     }
+
+    echo '------- mbc-digest-email MBC_UserDigest->processDigestCampaignActivity() - processedTargetUsers: ' . count($processedTargetUsers) . ' - targetCampaigns ' . $targetCampaigns . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
     return array($processedTargetUsers, $targetCampaigns);
   }
@@ -382,7 +384,7 @@ class MBC_UserDigest
     }
 
     // Dynamic member count in footer of message
-    $globalMergeVars[] = array(
+    $globalMergeVars[0] = array(
       'name' => 'MEMBER_COUNT',
       'content' => $this->getMemberCount()
     );
@@ -600,7 +602,7 @@ class MBC_UserDigest
 
     }
 
-    echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', "\n";
+    echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     return array($mergeVars, $targetUsers);
   }
 
