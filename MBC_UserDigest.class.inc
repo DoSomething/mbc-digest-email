@@ -222,7 +222,7 @@ class MBC_UserDigest
 
     }
 
-    echo '------- mbc-digest-email MBC_UserDigest->processDigestCampaignActivity() - processedTargetUsers: ' . count($processedTargetUsers) . ' - targetCampaigns ' . $targetCampaigns . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+    echo '------- mbc-digest-email MBC_UserDigest->processDigestCampaignActivity() - processedTargetUsers: ' . count($processedTargetUsers) . ' - targetCampaigns ' . count($targetCampaigns) . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
     return array($processedTargetUsers, $targetCampaigns);
   }
