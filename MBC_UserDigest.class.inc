@@ -658,7 +658,7 @@ class MBC_UserDigest
     );
     // Sequenilly select an item from the list of subjects, a different one
     // every week and start from the top once the end of the list is reached
-    $subjectCount = date('W') - (round(date('W') / count($subjects)) * count($subjects));
+    $subjectCount = abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
 
     $composedDigestSubmission = array(
       'subject' => $subjects[$subjectCount],
