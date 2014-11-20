@@ -102,16 +102,21 @@ class MBC_UserDigest
       $campaigns = $this->getCampaignDetails($targetCampaigns);
       $campaignDetails = $this->gatherCampaigns($campaigns);
 
-      // Build merge_var and gloabal_merge_var values
-      $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
-      $targetUsers = $this->filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars);
-      list($mergeVars, $targetUsers) = $this->composeMergeVars($targetUsers, $globalMergeVars);
-      $to = $this->composeTo($targetUsers);
+      // Only generate digest message if active / valid campaign details exsist
+      if (count($campaignDetails) > 0) {
 
-      // Assemble and send Mandrill digest message submission
-      $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
+        // Build merge_var and gloabal_merge_var values
+        $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
+        $targetUsers = $this->filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars);
+        list($mergeVars, $targetUsers) = $this->composeMergeVars($targetUsers, $globalMergeVars);
+        $to = $this->composeTo($targetUsers);
 
-      $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
+        // Assemble and send Mandrill digest message submission
+        $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
+
+        $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
+
+      }
 
     }
     else {
@@ -236,7 +241,7 @@ class MBC_UserDigest
     $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      $campaignApiUrl = getenv('DS_CAMPAIGN_API_HOST') . '/api/v1/content/' . $targetCampaign;
+      $campaignApiUrl = getenv('DS_DRUPAL_API_HOST') . '/api/v1/content/' . $targetCampaign;
 
       curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -270,6 +275,7 @@ class MBC_UserDigest
   private function gatherCampaigns($campaigns) {
 
     $campaignCount = 0;
+    $campaignDetails = array();
     foreach ($campaigns as $campaign) {
       if ((isset($campaign->status) && $campaign->status == 'active') &&
           (isset($campaign->type) && $campaign->type == 'campaign') &&
