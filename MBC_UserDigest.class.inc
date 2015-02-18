@@ -45,6 +45,20 @@ class MBC_UserDigest
   private $settings;
 
   /**
+   * Collection of helper methods
+   *
+   * @var object
+   */
+  private $toolbox;
+
+  /**
+   * The MEMBER_COUNT value from the DoSomething.org API via MB_Toolbox
+   *
+   * @var string
+   */
+  private $memberCount;
+
+  /**
    * Setting from external services - Mailchimp.
    *
    * @var array
@@ -81,7 +95,9 @@ class MBC_UserDigest
     $connection = $this->messageBroker->connection;
     $this->channel = $connection->channel();
 
-    // Stathat
+    $this->toolbox = new MB_Toolbox($settings);
+    $this->memberCount = $this->toolbox->getDSMemberCount();
+
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
     $this->statHat->setIsProduction(TRUE);
   }
@@ -386,7 +402,7 @@ class MBC_UserDigest
     // Dynamic member count in footer of message
     $globalMergeVars[0] = array(
       'name' => 'MEMBER_COUNT',
-      'content' => $this->getMemberCount()
+      'content' => $this->memberCount,
     );
 
     return $globalMergeVars;
