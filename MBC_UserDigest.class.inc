@@ -609,6 +609,10 @@ class MBC_UserDigest
               'name' => 'CAMPAIGNS',
               'content' => $campaignMergeVars,
             ),
+            2 => array(
+              'name' => 'SUBSCRIPTIONS_LINK',
+              'content' => $this->$toolbox->subscriptionsLinkGenerator($targetUser['email']),
+            ),
           )
         );
       }
