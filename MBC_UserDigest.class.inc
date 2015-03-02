@@ -1,5 +1,6 @@
 <?php
 
+use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MBStatTracker\StatHat;
 
 /**
