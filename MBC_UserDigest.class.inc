@@ -274,7 +274,6 @@ class MBC_UserDigest
       }
 
     }
-    curl_close($ch);
 
     return $campaignDetails;
   }
@@ -609,7 +608,7 @@ class MBC_UserDigest
             ),
             2 => array(
               'name' => 'SUBSCRIPTIONS_LINK',
-              'content' => $this->$toolbox->subscriptionsLinkGenerator($targetUser['email']),
+              'content' => $this->toolbox->subscriptionsLinkGenerator($targetUser['email']),
             ),
           )
         );
