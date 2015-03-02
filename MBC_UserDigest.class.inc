@@ -268,8 +268,9 @@ class MBC_UserDigest
       $campaignApiUrl = $curlUrl . '/api/v1/content/' . $targetCampaign;
       $result = $this->toolbox->curlGET($campaignApiUrl);
 
-      // Exclude campaigns that don't have cached details in Campaign API
-      if ($result != NULL) {
+      // Exclude campaigns that don't have details in Drupal API or "Access
+      // denied" due to campaign no longer published
+      if ($result != NULL || $result[0] != 'Access denied for user anonymous') {
         $campaignDetails[] = $result;
       }
 
