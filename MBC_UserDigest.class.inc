@@ -255,20 +255,17 @@ class MBC_UserDigest
    */
   private function getCampaignDetails($targetCampaigns) {
 
+    $curlUrl = $this->settings['ds_drupal_api_host'];
+    $port = $this->settings['ds_drupal_api_port'];
+    if ($port != 0 && is_numeric($port)) {
+      $curlUrl .= ':' . (int) $port;
+    }
+
     $campaignDetails = array();
-    $ch = curl_init();
     foreach ($targetCampaigns as $targetCampaign) {
 
-      $campaignApiUrl = getenv('DS_DRUPAL_API_HOST') . '/api/v1/content/' . $targetCampaign;
-
-      curl_setopt($ch, CURLOPT_URL, $campaignApiUrl);
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Content-type: application/json',
-        'Accept: application/json'
-      ));
-      $jsonResult = curl_exec($ch);
-      $result = json_decode($jsonResult);
+      $campaignApiUrl = $curlUrl . '/api/v1/content/' . $targetCampaign;
+      $result = $this->toolbox->curlGET($campaignApiUrl);
 
       // Exclude campaigns that don't have cached details in Campaign API
       if ($result != NULL) {
