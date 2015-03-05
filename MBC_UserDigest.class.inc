@@ -108,7 +108,7 @@ class MBC_UserDigest
    */
   public function generateDigests() {
 
-    list($targetUsers, $deliveryTags) = $this->consumeUserDigestQueue();
+    $targetUsers = $this->consumeUserDigestQueue();
 
     if ($targetUsers) {
 
@@ -132,6 +132,13 @@ class MBC_UserDigest
         $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
 
         $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
+
+        // Remove queue entries of messages that will be sent a digest
+        if ($mandrillResults) {
+          foreach ($targetUsers['deliveryTags'] as $targetUserDeliveryTag) {
+            $this->channel->basic_ack($targetUserDeliveryTag);
+          }
+        }
 
       }
 
@@ -159,7 +166,6 @@ class MBC_UserDigest
     $unackedCount = $status[2];
 
     $messageDetails = '';
-    $deliveryTags = array();
     $targetUsers = array();
     $processedCount = 0;
 
@@ -177,6 +183,7 @@ class MBC_UserDigest
         'email' => $messagePayload->email,
         'fname' => $messagePayload->merge_vars->FNAME,
         'campaigns' => $messagePayload->campaigns,
+        'delivery_tag' => $messageDetails->delivery_info['delivery_tag'],
       );
       if (isset($messagePayload->drupal_uid)) {
         $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
@@ -189,7 +196,7 @@ class MBC_UserDigest
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('consumeUserDigestQueue');
       $this->statHat->reportCount($processedCount);
-      return array($targetUsers, $deliveryTags);
+      return $targetUsers;
     }
     else {
       echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
@@ -270,7 +277,7 @@ class MBC_UserDigest
 
       // Exclude campaigns that don't have details in Drupal API or "Access
       // denied" due to campaign no longer published
-      if ($result != NULL || $result[0] != 'Access denied for user anonymous') {
+      if ($result != NULL && !is_array($result)) {
         $campaignDetails[] = $result;
       }
 
