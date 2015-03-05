@@ -48,6 +48,8 @@ $settings = array(
   'stathat_ez_key' => getenv("STATHAT_EZKEY"),
   'ds_drupal_api_host' => getenv('DS_DRUPAL_API_HOST'),
   'ds_drupal_api_port' => getenv('DS_DRUPAL_API_PORT'),
+  'ds_drupal_api_username' => getenv("DS_DRUPAL_API_USERNAME"),
+  'ds_drupal_api_password' => getenv("DS_DRUPAL_API_PASSWORD"),
 );
 
 
