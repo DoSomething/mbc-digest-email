@@ -173,11 +173,6 @@ class MBC_UserDigest
 
       $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
 
-      // @todo: The channel details are missing when messageBroker->sendAck is
-      // called. Need to restore sendAck functionality in messagebroker-phplib
-      // $this->messageBroker->sendAck($messageDetails);
-      $this->channel->basic_ack($messageDetails->delivery_info['delivery_tag']);
-
       $messagePayload = json_decode($messageDetails->body);
       $targetUsers[$processedCount] = array(
         'email' => $messagePayload->email,
@@ -603,6 +598,7 @@ class MBC_UserDigest
 
       // Skip entries that result in in empty campaign listings.
       if ($campaignMergeVars != '') {
+        $subscriptionLink = '<a href="http://' . $this->toolbox->subscriptionsLinkGenerator($targetUser['email']) . '">Unsubscribe</a>';
         $mergeVars[] = array(
           'rcpt' => $targetUser['email'],
           'vars' => array(
@@ -616,7 +612,7 @@ class MBC_UserDigest
             ),
             2 => array(
               'name' => 'SUBSCRIPTIONS_LINK',
-              'content' => $this->toolbox->subscriptionsLinkGenerator($targetUser['email']),
+              'content' => $subscriptionLink,
             ),
           )
         );
