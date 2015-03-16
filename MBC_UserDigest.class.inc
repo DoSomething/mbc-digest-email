@@ -135,11 +135,24 @@ class MBC_UserDigest
 
         // Remove queue entries of messages that will be sent a digest
         if ($mandrillResults) {
-          foreach ($targetUsers['deliveryTags'] as $targetUserDeliveryTag) {
-            $this->channel->basic_ack($targetUserDeliveryTag);
+          foreach ($mandrillResults as $mandrillResult) {
+            foreach ($targetUsers as $targetUser) {
+              if ($mandrillResult['email'] == $targetUser['email']) {
+                $this->channel->basic_ack($targetUser['delivery_tag']);
+              }
+            }
           }
         }
+        else {
+          echo 'ERROR - Mandrill responded with error results.', PHP_EOL;
+        }
 
+      }
+      // No campaign details found, toss the users
+      else {
+        foreach ($targetUsers as $targetUser) {
+          $this->channel->basic_ack($targetUser['delivery_tag']);
+        }
       }
 
     }
@@ -272,7 +285,7 @@ class MBC_UserDigest
 
       // Exclude campaigns that don't have details in Drupal API or "Access
       // denied" due to campaign no longer published
-      if ($result != NULL && !is_array($result)) {
+      if ($result != NULL && is_array($result) && $result[0] !== FALSE) {
         $campaignDetails[] = $result;
       }
 
