@@ -730,6 +730,7 @@ class MBC_UserDigest
 
     // Send message
     $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
+    echo '->submitToMandrill - mandrillResults: ' . print_r($mandrillResults, TRUE) . ' - ' . date('D M j G:i:s T Y'), PHP_EOL . PHP_EOL;
 
     return $mandrillResults;
   }
