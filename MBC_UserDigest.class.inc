@@ -199,6 +199,7 @@ class MBC_UserDigest
       $messageCount--;
       $processedCount++;
     }
+    echo '->consumeUserDigestQueue() - messageCount: ' . $messageCount . ', processedCount: ' . $processedCount . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
     if (count($targetUsers) > 0) {
       $this->statHat->clearAddedStatNames();
@@ -285,7 +286,7 @@ class MBC_UserDigest
 
       // Exclude campaigns that don't have details in Drupal API or "Access
       // denied" due to campaign no longer published
-      if ($result != NULL && is_array($result) && $result[0] !== FALSE) {
+      if ($result != NULL && is_object($result) || (is_array($result) && $result[0] !== FALSE)) {
         $campaignDetails[] = $result;
       }
 
