@@ -595,6 +595,7 @@ class MBC_UserDigest
 
     $mergeVars = array();
     $campaignDividerMarkup = file_get_contents(__DIR__ . '/campaign-divider-markup.inc');
+    $processedUsers = $targetUsers;
 
     foreach ($targetUsers as $targetUserIndex => $targetUser) {
 
@@ -610,12 +611,9 @@ class MBC_UserDigest
         }
       }
 
-      // Skip entries that result in in empty campaign listings.
-      if ($campaignMergeVars != '') {
-        $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
-        if ($subscriptionLink == FALSE) {
-          $subscriptionLink = '';
-        }
+      // Skip entries that result in in empty campaign listings or unsubscription link generation failed.
+      $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
+      if ($campaignMergeVars != '' && $subscriptionLink != FALSE) {
 
         $mergeVars[] = array(
           'rcpt' => $targetUser['email'],
@@ -636,10 +634,11 @@ class MBC_UserDigest
         );
       }
       else {
-        unset($targetUsers[$targetUserIndex]);
+        unset($processedUsers[$targetUserIndex]);
       }
 
     }
+    $targetUsers = $processedUsers;
 
     echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     return array($mergeVars, $targetUsers);
