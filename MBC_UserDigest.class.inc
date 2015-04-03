@@ -612,7 +612,11 @@ class MBC_UserDigest
 
       // Skip entries that result in in empty campaign listings.
       if ($campaignMergeVars != '') {
-        $subscriptionLink = '<a href="http://' . $this->toolbox->subscriptionsLinkGenerator($targetUser['email']) . '">Unsubscribe</a>';
+        $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
+        if ($subscriptionLink == FALSE) {
+          $subscriptionLink = '';
+        }
+
         $mergeVars[] = array(
           'rcpt' => $targetUser['email'],
           'vars' => array(
