@@ -328,6 +328,7 @@ class MBC_UserDigest
           'solution_support' => $campaign->solution_support,
           'call_to_action' => $campaign->call_to_action,
           'fact_problem' => $campaign->fact_problem->fact,
+          'latest_news' => $campaign->latest_news_copy,
         );
 
         if (isset($campaign->image_header->src)) {
@@ -470,8 +471,13 @@ class MBC_UserDigest
     $campaignMarkup = str_replace('*|FACT_SOLUTION|*', $campaign['fact_solution'], $campaignMarkup);
     $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
     $campaignMarkup = str_replace('*|DURING_TIP_HEADER|*', $campaign['during_tip_header'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
     $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['tip_title'], $campaignMarkup);
+
+    if ($campaign['latest_news'] != '') {
+      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
+    } else {
+      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
+    }
 
     // @todo: 
     // - Add Google Analitics
