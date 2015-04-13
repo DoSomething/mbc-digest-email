@@ -510,53 +510,58 @@ class MBC_UserDigest
       foreach ($targetUserCampaigns as $targetUserCampaignCount => $targetUserCampaign) {
 
         // Skip any campaigns where the nid is invalid
-        if (!isset($globalMergeVars[$targetUserCampaign->nid])) {
-          continue;
-        }
+        if (isset($globalMergeVars[$targetUserCampaign->nid])) {
 
-        foreach ($campaignDetails as $campaignDetailIndex => $campaignDetail) {
+          foreach ($campaignDetails as $campaignDetailIndex => $campaignDetail) {
 
-          // Check if the nid's match
-          if (isset($targetUserCampaign->nid) &&
-              isset($campaignDetail['drupal_nid']) &&
-              $targetUserCampaign->nid == $campaignDetail['drupal_nid']) {
+            // Check if the nid's match
+            if (isset($targetUserCampaign->nid) &&
+                isset($campaignDetail['drupal_nid']) &&
+                $targetUserCampaign->nid == $campaignDetail['drupal_nid']) {
 
-            if (isset($campaignDetail['is_staff_pick']) &&
-                $campaignDetail['is_staff_pick'] == 'true') {
-              $staffPicks[] = $targetUserCampaign;
+              if (isset($campaignDetail['is_staff_pick']) &&
+                  $campaignDetail['is_staff_pick'] == 'true') {
+                $staffPicks[] = $targetUserCampaign;
+              }
+              else {
+                $nonStaffPicks[] = $targetUserCampaign;
+              }
+
+              break;
             }
-            else {
-              $nonStaffPicks[] = $targetUserCampaign;
-            }
 
-            break;
           }
 
         }
 
       }
 
-      // @todo: Add sort by high season
+      // Skip if no active campaigns are found for user
+      if (count($staffPicks) > 0 || count($nonStaffPicks) > 0 ) {
 
-      // Sort staff picks by date
-      usort($staffPicks, function($a, $b) {
-        return $a->signup - $b->signup;
-      });
+        // Sort staff picks by date
+        usort($staffPicks, function($a, $b) {
+          return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
+        });
 
-      // Sort non-staff picks by date
-      usort($nonStaffPicks, function($a, $b) {
-        return $a->signup - $b->signup;
-      });
+        // Sort non-staff picks by date
+        usort($nonStaffPicks, function($a, $b) {
+          return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
+        });
 
-      // Append the non-staff pick campaigns onto the end of the staff pick campaigns
-      $targetUserCampaigns = $staffPicks + $nonStaffPicks;
+        // Append the non-staff pick campaigns onto the end of the staff pick campaigns
+        $targetUserCampaigns = $staffPicks;
+        foreach ($nonStaffPicks as $nonStaffPick) {
+          $targetUserCampaigns[] = $nonStaffPick;
+        }
 
-      // Limit the number of campaigns in message to MAX_CAMPAIGNS
-      if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
-          $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
+        // Limit the number of campaigns in message to MAX_CAMPAIGNS
+        if (count($targetUserCampaigns) > self::MAX_CAMPAIGNS) {
+            $targetUserCampaigns = array_slice($targetUserCampaigns, 0, self::MAX_CAMPAIGNS);
+        }
+
+        $targetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
       }
-
-      $targetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
     }
 
     return $targetUsers;
