@@ -459,7 +459,6 @@ class MBC_UserDigest
     if (!isset($campaign['during_tip_header'])) {
       $campaign['during_tip_header'] = '';
     }
-    $campaign['tip_title'] = 'Tip from the team:';
     if (!isset($campaign['during_tip'])) {
       $campaign['tip_title'] = '';
       $campaign['during_tip'] = '';
@@ -474,6 +473,7 @@ class MBC_UserDigest
     $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['tip_title'], $campaignMarkup);
 
     if ($campaign['latest_news'] != '') {
+      $campaign['tip_title'] = 'Tip from the team:';
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
     } else {
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
