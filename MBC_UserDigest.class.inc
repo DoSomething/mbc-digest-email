@@ -69,7 +69,7 @@ class MBC_UserDigest
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 500;
+  const BATCH_SIZE = 5000;
   const MAX_CAMPAIGNS = 5;
 
   /**
@@ -651,6 +651,9 @@ class MBC_UserDigest
       }
       else {
         unset($processedUsers[$targetUserIndex]);
+        if ($subscriptionLink == FALSE) {
+          echo 'composeMergeVars - ERROR generating Unsubscribe link.', PHP_EOL;
+        }
       }
 
     }
