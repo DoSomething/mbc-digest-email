@@ -472,12 +472,17 @@ class MBC_UserDigest
     $campaignMarkup = str_replace('*|DURING_TIP_HEADER|*', $campaign['during_tip_header'], $campaignMarkup);
 
     if ($campaign['latest_news'] != '') {
-      $campaign['tip_title'] = 'Tip from the team:';
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'Tip from the team:', $campaignMarkup);
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
-    } else {
+    } elseif (isset($campaign['during_tip'])) {
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'Tip from the team:', $campaignMarkup);
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
     }
-    $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['tip_title'], $campaignMarkup);
+    else {
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  '', $campaignMarkup);
+      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
+      echo 'Tip merge_var values not set for ' . $campaign['title'], PHP_EOL;
+    }
 
     // @todo: 
     // - Add Google Analitics
