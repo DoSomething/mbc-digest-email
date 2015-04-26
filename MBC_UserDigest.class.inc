@@ -97,7 +97,8 @@ class MBC_UserDigest
     $this->channel = $connection->channel();
 
     $this->toolbox = new MB_Toolbox($settings);
-    $this->memberCount = $this->toolbox->getDSMemberCount();
+    $result = $this->toolbox->getDSMemberCount();
+    $this->memberCount = $result[0];
 
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
     $this->statHat->setIsProduction(TRUE);
@@ -286,8 +287,8 @@ class MBC_UserDigest
 
       // Exclude campaigns that don't have details in Drupal API or "Access
       // denied" due to campaign no longer published
-      if ($result != NULL && is_object($result) || (is_array($result) && $result[0] !== FALSE)) {
-        $campaignDetails[] = $result;
+      if ($result != NULL && (is_array($result) && $result[0] !== FALSE)) {
+        $campaignDetails[] = $result[0];
       }
 
     }
@@ -628,7 +629,8 @@ class MBC_UserDigest
       }
 
       // Skip entries that result in in empty campaign listings or unsubscription link generation failed.
-      $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
+      $result = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
+      $subscriptionLink = $result[0];
       if ($campaignMergeVars != '' && $subscriptionLink != FALSE) {
 
         $mergeVars[] = array(
