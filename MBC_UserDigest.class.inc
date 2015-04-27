@@ -473,11 +473,18 @@ class MBC_UserDigest
     $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
     $campaignMarkup = str_replace('*|DURING_TIP_HEADER|*', $campaign['during_tip_header'], $campaignMarkup);
 
+    // Buiuld News / Tip content for campaign
     if (isset($campaign['latest_news'] ) && $campaign['latest_news'] != '') {
-      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'Tip from the team:', $campaignMarkup);
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team:', $campaignMarkup);
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
     } elseif (isset($campaign['during_tip']) && $campaign['during_tip'] != '') {
-      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'Tip from the team:', $campaignMarkup);
+      if (isset($campaign['during_tip_header']) && $campaign['during_tip'] != '') {
+        $campaign['during_tip_header'] .= ':';
+        $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['during_tip_header'], $campaignMarkup);
+      }
+      else {
+        $campaignMarkup = str_replace('*|TIP_TITLE|*',  'Tip from the team:', $campaignMarkup);
+      }
       $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip'], $campaignMarkup);
     }
     else {
