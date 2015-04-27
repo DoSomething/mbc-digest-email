@@ -97,8 +97,7 @@ class MBC_UserDigest
     $this->channel = $connection->channel();
 
     $this->toolbox = new MB_Toolbox($settings);
-    $result = $this->toolbox->getDSMemberCount();
-    $this->memberCount = $result[0];
+    $this->memberCount = $this->toolbox->getDSMemberCount();
 
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
     $this->statHat->setIsProduction(TRUE);
@@ -629,8 +628,7 @@ class MBC_UserDigest
       }
 
       // Skip entries that result in in empty campaign listings or unsubscription link generation failed.
-      $result = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
-      $subscriptionLink = $result[0];
+      $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
       if ($campaignMergeVars != '' && $subscriptionLink != FALSE) {
 
         $mergeVars[] = array(
@@ -717,7 +715,7 @@ class MBC_UserDigest
     );
     // Sequenilly select an item from the list of subjects, a different one
     // every week and start from the top once the end of the list is reached
-    $subjectCount = abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
+    $subjectCount = (int) abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
 
     $composedDigestSubmission = array(
       'subject' => $subjects[$subjectCount],
