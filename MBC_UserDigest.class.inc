@@ -250,6 +250,8 @@ class MBC_UserDigest
         $processedTargetUsers[$targetUserIndex]['campaigns'] = $targetUserCampaigns;
       }
       else {
+        // No campaign activity to process, remove from queue and don't include in further processing in current batch
+        $this->channel->basic_ack($processedTargetUsers[$targetUserIndex]['delivery_tag']);
         unset($processedTargetUsers[$targetUserIndex]);
       }
 
