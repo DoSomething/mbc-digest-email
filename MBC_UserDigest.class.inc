@@ -651,11 +651,14 @@ class MBC_UserDigest
       }
       elseif ($subscriptionLink == FALSE) {
         unset($processedUsers[$targetUserIndex]);
-        echo 'composeMergeVars - ERROR generating Unsubscribe link.', PHP_EOL;
+        echo '- composeMergeVars - ERROR generating Unsubscribe link.', PHP_EOL;
       }
       elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email:') !== FALSE) {
         // @todo: Delete user from mb-user database
-        echo 'No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
+        echo '- No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
+      }
+      elseif ($campaignMergeVars != '') {
+        echo '- composeMergeVars - No active campaigns found for: ' . $targetUser['email'], PHP_EOL;
       }
 
     }
