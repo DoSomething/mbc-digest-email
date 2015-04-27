@@ -652,15 +652,19 @@ class MBC_UserDigest
         );
       }
       elseif ($subscriptionLink == FALSE) {
+        echo '- composeMergeVars - ERROR generating Unsubscribe link. Call to Drupal API failed, leave in queue fro next run.', PHP_EOL;
         unset($processedUsers[$targetUserIndex]);
-        echo '- composeMergeVars - ERROR generating Unsubscribe link.', PHP_EOL;
       }
       elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email:') !== FALSE) {
         // @todo: Delete user from mb-user database
         echo '- No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
+        unset($processedUsers[$targetUserIndex]);
+        $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
       }
       elseif ($campaignMergeVars != '') {
         echo '- composeMergeVars - No active campaigns found for: ' . $targetUser['email'], PHP_EOL;
+        unset($processedUsers[$targetUserIndex]);
+        $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
       }
 
     }
