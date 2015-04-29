@@ -638,8 +638,11 @@ class MBC_UserDigest
 
       // Skip entries that result in in empty campaign listings or unsubscription link generation failed.
       if ($campaignMergeVars != '') {
-
+        if (!isset($targetUser['drupal_uid'])) {
+           $targetUser['drupal_uid'] = NULL;
+        }
         $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email'], $targetUser['drupal_uid']);
+
         if ($subscriptionLink == FALSE) {
           echo '- composeMergeVars - ERROR generating Unsubscribe link. Call to Drupal API failed, leave in queue for next run.', PHP_EOL;
           unset($processedUsers[$targetUserIndex]);
