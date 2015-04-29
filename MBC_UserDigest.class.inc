@@ -69,7 +69,7 @@ class MBC_UserDigest
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 200;
+  const BATCH_SIZE = 5000;
   const MAX_CAMPAIGNS = 5;
 
   /**
