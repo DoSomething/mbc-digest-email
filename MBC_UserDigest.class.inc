@@ -637,38 +637,42 @@ class MBC_UserDigest
       }
 
       // Skip entries that result in in empty campaign listings or unsubscription link generation failed.
-      $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email']);
-      if ($campaignMergeVars != '' && $subscriptionLink != FALSE) {
+      if ($campaignMergeVars != '') {
 
-        $mergeVars[] = array(
-          'rcpt' => $targetUser['email'],
-          'vars' => array(
-            0 => array(
-              'name' => 'FNAME',
-              'content' => $targetUser['fname'],
-            ),
-            1 => array(
-              'name' => 'CAMPAIGNS',
-              'content' => $campaignMergeVars,
-            ),
-            2 => array(
-              'name' => 'SUBSCRIPTIONS_LINK',
-              'content' => $subscriptionLink,
-            ),
-          )
-        );
+        $subscriptionLink = $this->toolbox->subscriptionsLinkGenerator($targetUser['email'], $targetUser['drupal_uid']);
+        if ($subscriptionLink == FALSE) {
+          echo '- composeMergeVars - ERROR generating Unsubscribe link. Call to Drupal API failed, leave in queue for next run.', PHP_EOL;
+          unset($processedUsers[$targetUserIndex]);
+        }
+        elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email:') !== FALSE) {
+          // @todo: Delete user from mb-user database
+          echo '- No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
+          $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
+          unset($processedUsers[$targetUserIndex]);
+        }
+        else {
+
+          $mergeVars[] = array(
+            'rcpt' => $targetUser['email'],
+            'vars' => array(
+              0 => array(
+                'name' => 'FNAME',
+                'content' => $targetUser['fname'],
+              ),
+              1 => array(
+                'name' => 'CAMPAIGNS',
+                'content' => $campaignMergeVars,
+              ),
+              2 => array(
+                'name' => 'SUBSCRIPTIONS_LINK',
+                'content' => $subscriptionLink,
+              ),
+            )
+          );
+
+        }
       }
-      elseif ($subscriptionLink == FALSE) {
-        echo '- composeMergeVars - ERROR generating Unsubscribe link. Call to Drupal API failed, leave in queue for next run.', PHP_EOL;
-        unset($processedUsers[$targetUserIndex]);
-      }
-      elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email:') !== FALSE) {
-        // @todo: Delete user from mb-user database
-        echo '- No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
-        $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
-        unset($processedUsers[$targetUserIndex]);
-      }
-      elseif ($campaignMergeVars == '') {
+      else {
         echo '- composeMergeVars - No active campaigns found for: ' . $targetUser['email'], PHP_EOL;
         $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
         unset($processedUsers[$targetUserIndex]);
