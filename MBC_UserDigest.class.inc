@@ -744,8 +744,8 @@ class MBC_UserDigest
 
     $composedDigestSubmission = array(
       'subject' => $subjects[$subjectCount],
-      'from_email' => 'help@dosomething.org',
-      'from_name' => 'DoSomething.org',
+      'from_email' => 'noreply@dosomething.org',
+      'from_name' => 'Ben, DoSomething.org',
       'to' => $to,
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $mergeVars,
