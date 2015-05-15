@@ -126,25 +126,34 @@ class MBC_UserDigest
         $globalMergeVars = $this->composeGlobalMergeVars($campaignDetails);
         $targetUsers = $this->filterCampaigns($targetUsers, $campaignDetails, $globalMergeVars);
         list($mergeVars, $targetUsers) = $this->composeMergeVars($targetUsers, $globalMergeVars);
-        $to = $this->composeTo($targetUsers);
 
-        // Assemble and send Mandrill digest message submission
-        $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
+        // All targetUsers were disqualified, don't process any further
+        if (count($targetUsers) > 0) {
 
-        $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
+          $to = $this->composeTo($targetUsers);
 
-        // Remove queue entries of messages that will be sent a digest
-        if ($mandrillResults) {
-          foreach ($mandrillResults as $mandrillResult) {
-            foreach ($targetUsers as $targetUser) {
-              if ($mandrillResult['email'] == $targetUser['email']) {
-                $this->channel->basic_ack($targetUser['delivery_tag']);
+          // Assemble and send Mandrill digest message submission
+          $composedDigestSubmission = $this->composeDigestSubmission($to, $mergeVars, $globalMergeVars);
+
+          $mandrillResults = $this->submitToMandrill($composedDigestSubmission);
+
+          // Remove queue entries of messages that will be sent a digest
+          if ($mandrillResults) {
+            foreach ($mandrillResults as $mandrillResult) {
+              foreach ($targetUsers as $targetUser) {
+                if ($mandrillResult['email'] == $targetUser['email']) {
+                  $this->channel->basic_ack($targetUser['delivery_tag']);
+                }
               }
             }
           }
+          else {
+            echo 'ERROR - Mandrill responded with error results.', PHP_EOL;
+          }
+
         }
         else {
-          echo 'ERROR - Mandrill responded with error results.', PHP_EOL;
+          echo '- mbc-digest-email generateDigests: All entries disqualified -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
         }
 
       }
@@ -157,7 +166,7 @@ class MBC_UserDigest
 
     }
     else {
-      echo '------- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+      echo '- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -647,7 +656,7 @@ class MBC_UserDigest
           echo '- composeMergeVars - ERROR generating Unsubscribe link. Call to Drupal API failed, leave in queue for next run.', PHP_EOL;
           unset($processedUsers[$targetUserIndex]);
         }
-        elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email:') !== FALSE) {
+        elseif (strpos($subscriptionLink, 'ERROR - Drupal user not found by email.') !== FALSE) {
           // @todo: Delete user from mb-user database
           echo '- No Drupal user fround for: ' . $targetUser['email'], PHP_EOL;
           $this->channel->basic_ack($processedUsers[$targetUserIndex]['delivery_tag']);
