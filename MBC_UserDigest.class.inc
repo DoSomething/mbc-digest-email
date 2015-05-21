@@ -100,7 +100,7 @@ class MBC_UserDigest
     $this->memberCount = $this->toolbox->getDSMemberCount();
 
     $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
-    $this->statHat->setIsProduction(TRUE);
+    $this->statHat->setIsProduction(isset($settings['use_stathat_tracking']) ? $settings['use_stathat_tracking'] : FALSE);
   }
 
   /**
