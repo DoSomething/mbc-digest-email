@@ -65,6 +65,13 @@ $config = array(
       'bindingKey' => $userDigestExchange->queues->userDigestQueue->binding_key,
     ),
   ),
+  'consume' => array(
+    'consumer_tag' => $userDigestExchange->queues->userDigestQueue->consume->tag,
+    'no_local' => $userDigestExchange->queues->userDigestQueue->consume->no_local,
+    'no_ack' => $userDigestExchange->queues->userDigestQueue->consume->no_ack,
+    'exclusive' => $userDigestExchange->queues->userDigestQueue->consume->exclusive,
+    'nowait' => $userDigestExchange->queues->userDigestQueue->consume->nowait,
+  ),
 );
 
 
