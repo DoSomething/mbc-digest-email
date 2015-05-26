@@ -69,7 +69,7 @@ class MBC_UserDigest
   /**
    * The number of queue entries to process in each session
    */
-  const BATCH_SIZE = 5000;
+  const BATCH_SIZE = 500;
   const MAX_CAMPAIGNS = 5;
 
   /**
@@ -166,7 +166,7 @@ class MBC_UserDigest
 
     }
     else {
-      echo '- mbc-digest-email generateDigests: No entries in userDigestQueue -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+      echo '- mbc-digest-email generateDigests: Entries unacked messages fount in userDigestQueue, try again later. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     }
 
   }
@@ -187,37 +187,49 @@ class MBC_UserDigest
     // @todo: Respond to unacknowledged messages
     $unackedCount = $status[2];
 
-    $messageDetails = '';
-    $targetUsers = array();
-    $processedCount = 0;
+echo 'consumeUserDigestQueue = ststus: ' . print_r($status, TRUE), PHP_EOL;
 
-    while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
-
-      $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
-
-      $messagePayload = json_decode($messageDetails->body);
-      $targetUsers[$processedCount] = array(
-        'email' => $messagePayload->email,
-        'fname' => $messagePayload->merge_vars->FNAME,
-        'campaigns' => $messagePayload->campaigns,
-        'delivery_tag' => $messageDetails->delivery_info['delivery_tag'],
-      );
-      if (isset($messagePayload->drupal_uid)) {
-        $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
-      }
-      $messageCount--;
-      $processedCount++;
-    }
-    echo '->consumeUserDigestQueue() - messageCount: ' . $messageCount . ', processedCount: ' . $processedCount . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
-
-    if (count($targetUsers) > 0) {
-      $this->statHat->clearAddedStatNames();
-      $this->statHat->addStatName('consumeUserDigestQueue');
-      $this->statHat->reportCount($processedCount);
-      return $targetUsers;
+    // Skip if unacked messages exist, aka a consumer is already running. This needs to be avaioded to prevent
+    // duplicate messages being sent
+    if ($unackedCount > 0) {
+      echo '- consumeUserDigestQueue: Unacked messages found, other consumer is already running... try again later.', PHP_EOL;
+      return FALSE;
     }
     else {
-      echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+
+      $messageDetails = '';
+      $targetUsers = array();
+      $processedCount = 0;
+
+      while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
+
+        $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
+
+        $messagePayload = json_decode($messageDetails->body);
+        $targetUsers[$processedCount] = array(
+          'email' => $messagePayload->email,
+          'fname' => $messagePayload->merge_vars->FNAME,
+          'campaigns' => $messagePayload->campaigns,
+          'delivery_tag' => $messageDetails->delivery_info['delivery_tag'],
+        );
+        if (isset($messagePayload->drupal_uid)) {
+          $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
+        }
+        $messageCount--;
+        $processedCount++;
+      }
+      echo '->consumeUserDigestQueue() - messageCount: ' . $messageCount . ', processedCount: ' . $processedCount . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+
+      if (count($targetUsers) > 0) {
+        $this->statHat->clearAddedStatNames();
+        $this->statHat->addStatName('consumeUserDigestQueue');
+        $this->statHat->reportCount($processedCount);
+        return $targetUsers;
+      }
+      else {
+        echo '------- mbc-digest-email MBC_UserDigest->consumeUserDigestQueue() - Queue is empty. -  ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+      }
+
     }
 
   }
@@ -627,6 +639,8 @@ class MBC_UserDigest
    */
   private function composeMergeVars($targetUsers, $globalMergeVars) {
 
+    echo 'composeMergeVars START targetUsers: ' . print_r($targetUsers, TRUE), PHP_EOL;
+
     $mergeVars = array();
     $campaignDividerMarkup = file_get_contents(__DIR__ . '/campaign-divider-markup.inc');
     $processedUsers = $targetUsers;
@@ -692,6 +706,9 @@ class MBC_UserDigest
 
     }
     $targetUsers = $processedUsers;
+
+    echo '>>>>> ------- targetUsers: ' . print_r($targetUsers, TRUE) . '---------------', PHP_EOL;
+    echo '>>>>> ------- mergeVars: ' . print_r($mergeVars, TRUE), PHP_EOL;
 
     echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     return array($mergeVars, $targetUsers);
@@ -785,8 +802,15 @@ class MBC_UserDigest
       ),
     );
 
+    foreach($composedDigestSubmission['merge_vars'] as $subCount => $submission) {
+      if ($submission['rcpt'] == 'mlidey+123@dosomething.org') {
+        echo 'subCount: ' . $subCount, PHP_EOL;
+        echo 'submission: ' . print_r($submission, TRUE), PHP_EOL;
+      }
+    }
+
     // Send message
-    $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
+//    $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
     echo '->submitToMandrill - mandrillResults: ' . print_r($mandrillResults, TRUE) . ' - ' . date('D M j G:i:s T Y'), PHP_EOL . PHP_EOL;
 
     return $mandrillResults;
