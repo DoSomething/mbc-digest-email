@@ -202,7 +202,6 @@ class MBC_UserDigest
     // @todo: Respond to unacknowledged messages
     $unackedCount = $status[2];
 
-<<<<<<< HEAD
     if ($messageCount > 0) {
 
       $messageDetails = '';
@@ -211,8 +210,7 @@ class MBC_UserDigest
 
       // Callback, task to perform to process each message consumed from queue
       $consumeUserDigestQueueCallback = function($messageDetails) {
-
-=======
+        
 echo 'consumeUserDigestQueue = ststus: ' . print_r($status, TRUE), PHP_EOL;
 
     // Skip if unacked messages exist, aka a consumer is already running. This needs to be avaioded to prevent
