@@ -8,23 +8,23 @@ use DoSomething\MBC_LoggingGateway\MBC_LoggingGateway;
   // https://getcomposer.org/doc/01-basic-usage.md
   $loader = require_once __DIR__ . '/../vendor/autoload.php';
  
-class  MBC_ImageProcessorTest extends PHPUnit_Framework_TestCase {
+class  MBC_UserDigestTest extends PHPUnit_Framework_TestCase {
   
   public function setUp(){ }
   public function tearDown(){ }
  
-  public function testProcessImage()
+  public function testGetCampaignDetails()
   {
 
     date_default_timezone_set('America/New_York');
 
     // Load Message Broker settings used mb mbp-user-import.php
     define('CONFIG_PATH',  __DIR__ . '/../messagebroker-config');
-    require_once __DIR__ . '/../mbc-image-processor.config.inc';
+    require_once __DIR__ . '/../mbc-digest-email.config.inc';
 
     // Create  MBP_ImageProcessor object to access ?? method for testing
     $messageBroker = new MessageBroker($credentials, $config);
-    $mbcLoggingGateway = new MBC_ImageProcessor($messageBroker, $settings);
+    $mbcLoggingGateway = new MBC_DigestEmail($messageBroker, $settings);
 
     
     $this->assertTrue(TRUE);
