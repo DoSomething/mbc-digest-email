@@ -53,11 +53,6 @@ class MBC_RabbitMQManagementAPI
    *   Settings from external services - Mailchimp
    */
   public function __construct($credentials) {
-    
-    $bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
 
     $this->config = $config;
     $this->credentials = $credentials;
@@ -71,13 +66,7 @@ if ($bla) {
    * Determine the next temporary digest queue that needs processing.
    */
   public function nextQueue($exchangeName) {
-    
-    $bla = FALSE;
-if ($bla) {
-  $bla = TRUE;
-}
     $queues = $this->rabbitManagement->exchanges()->get('dosomething', 'directUserDigestExchange');
-
   }
 
 }
