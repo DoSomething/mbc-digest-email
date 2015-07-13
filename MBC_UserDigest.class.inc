@@ -1,7 +1,8 @@
 <?php
 
 use DoSomething\MB_Toolbox\MB_Toolbox;
-use DoSomething\MBStatTracker\StatHat;
+use DoSomething\StatHat\Client as StatHat;
+use RabbitMq\ManagementApi\Client;
 
 /**
  * MBC_UserRegistration class - functionality related to the Message Broker
@@ -67,6 +68,13 @@ class MBC_UserDigest
   private $statHat;
 
   /**
+   * RabbitMQ Management API.
+   *
+   * @var array
+   */
+  private $rabbitManagement;
+
+  /**
    * The number of queue entries to process in each session
    */
   const BATCH_SIZE = 5000;
@@ -96,19 +104,26 @@ class MBC_UserDigest
     $connection = $this->messageBroker->connection;
     $this->channel = $connection->channel();
 
+    $this->messageBroker->setupExchange($this->config['exchange']['name'], $this->config['exchange']['type'], $this->channel);
+    list($queueName, ,) = $this->channel->queue_declare("", $this->config['queue'][0]['passive'], $this->config['queue'][0]['durable'], $this->config['queue'][0]['exclusive'], $this->config['queue'][0]['auto_delete']);
+    $this->config['queue'][0]['name'] = $queueName;
+
     $this->toolbox = new MB_Toolbox($settings);
     $this->memberCount = $this->toolbox->getDSMemberCount();
 
-    $this->statHat = new StatHat($this->settings['stathat_ez_key'], 'mbc-digest-email:');
-    $this->statHat->setIsProduction(isset($settings['use_stathat_tracking']) ? $settings['use_stathat_tracking'] : FALSE);
+    // @todo: Update to new StatHat library.
+    $this->statHat = new StatHat(['ez_key' => $this->settings['stathat_ez_key'], 'user_key' => 'mbc-digest-email:']);
+
   }
 
   /**
    * Controller for Digest message processing.
    */
-  public function generateDigests() {
+  public function generateDigests($queueName) {
 
-    $targetUsers = $this->consumeUserDigestQueue();
+    $queues = $this->rabbitManagement->exchanges()->get('dosomething', 'directUserDigestExchange');
+
+    $targetUsers = $this->consumeUserDigestQueue($queueName);
 
     if ($targetUsers) {
 
@@ -178,39 +193,60 @@ class MBC_UserDigest
    * @return array
    *   An array of the status of the job
    */
-  private function consumeUserDigestQueue() {
+  private function consumeUserDigestQueue($targetQueue) {
 
     // Get the status details of the queue by requesting a declare
-    list($this->channel, $status) = $this->messageBroker->setupQueue($this->config['queue'][0]['name'], $this->channel);
+    list($this->channel, $status) = $this->messageBroker->setupQueue($targetQueue, $this->channel);
 
     $messageCount = $status[1];
     // @todo: Respond to unacknowledged messages
     $unackedCount = $status[2];
 
-    $messageDetails = '';
-    $targetUsers = array();
-    $processedCount = 0;
+    if ($messageCount > 0) {
 
-    while ($messageCount > 0 && $processedCount < self::BATCH_SIZE) {
+      $messageDetails = '';
+      $targetUsers = array();
+      $processedCount = 0;
 
-      $messageDetails = $this->channel->basic_get($this->config['queue'][0]['name']);
+      // Callback, task to perform to process each message consumed from queue
+      $consumeUserDigestQueueCallback = function($messageDetails) {
 
-      $messagePayload = json_decode($messageDetails->body);
-      $targetUsers[$processedCount] = array(
-        'email' => $messagePayload->email,
-        'fname' => $messagePayload->merge_vars->FNAME,
-        'campaigns' => $messagePayload->campaigns,
-        'delivery_tag' => $messageDetails->delivery_info['delivery_tag'],
-      );
-      if (isset($messagePayload->drupal_uid)) {
-        $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
+        $messagePayload = json_decode($messageDetails->body);
+        $targetUsers[$processedCount] = array(
+          'email' => $messagePayload->email,
+          'fname' => $messagePayload->merge_vars->FNAME,
+          'campaigns' => $messagePayload->campaigns,
+        );
+        if (isset($messagePayload->drupal_uid)) {
+          $targetUsers[$processedCount]['drupal_uid'] = $messagePayload->drupal_uid;
+        }
+
+        // Ack that the message was received
+        $this->channel->basic_ack($messageDetails->delivery_info['delivery_tag']);
+
+        $processedCount++;
+      };
+
+      // The number of messages a consumer can process before sending an ack
+      // Fair Dispatch: https://www.rabbitmq.com/tutorials/tutorial-two-php.html
+      // aka: don't dispatch a new message to a consumer until it has processed and
+      // acknowledged the previous one - ensures message distribution between consumers
+      // by consumption rate rather than basic round robin.
+      $this->channel->basic_qos(null, 1, null);
+
+      // basic_consume($queue_name, '', $noLocal = false, $noAck = true, $exclusive = true, $noWait = false, $callback);
+      $messageDetails = $this->channel->basic_consume($this->config['queue'][0]['name'], '', false, false, false, false, $consumeUserDigestQueueCallback);
+
+      // Block while queue is consumed
+      while(count($this->channel->callbacks) || $processedCount <= self::BATCH_SIZE) {
+        $this->channel->wait();
       }
-      $messageCount--;
-      $processedCount++;
-    }
-    echo '->consumeUserDigestQueue() - messageCount: ' . $messageCount . ', processedCount: ' . $processedCount . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
 
-    if (count($targetUsers) > 0) {
+      // Sweet, that's all the messages in the queue. Close the connection. Return the batch of users for processing to compose digest messages.
+      $this->channel->close();
+
+      echo '->consumeUserDigestQueue() - messageCount: ' . $messageCount . ', processedCount: ' . $processedCount . ' - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
+
       $this->statHat->clearAddedStatNames();
       $this->statHat->addStatName('consumeUserDigestQueue');
       $this->statHat->reportCount($processedCount);
@@ -693,7 +729,6 @@ class MBC_UserDigest
     }
     $targetUsers = $processedUsers;
 
-    echo '------- mbc-digest-email composeMergeVars: ' . count($mergeVars) . ' messages composed - ' . date('D M j G:i:s T Y') . ' -------', PHP_EOL;
     return array($mergeVars, $targetUsers);
   }
 
@@ -785,8 +820,19 @@ class MBC_UserDigest
       ),
     );
 
+    // {"email":"mlidey+123@dosomething.org","campaigns":[{"nid":74,"signup":1397144129}],"merge_vars":{"FNAME":"Marah"},"drupal_uid":1742527}
+
+    foreach($composedDigestSubmission['merge_vars'] as $subCount => $submission) {
+      if ($submission['rcpt'] == 'mlidey+123@dosomething.org') {
+        echo 'subCount: ' . $subCount, PHP_EOL;
+        echo '<pre>';
+        print_r($submission['rcpt']);
+        echo '</pre>';
+      }
+    }
+
     // Send message
-    $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
+    // $mandrillResults = $mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestSubmission);
     echo '->submitToMandrill - mandrillResults: ' . print_r($mandrillResults, TRUE) . ' - ' . date('D M j G:i:s T Y'), PHP_EOL . PHP_EOL;
 
     return $mandrillResults;
