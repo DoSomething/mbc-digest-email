@@ -21,10 +21,10 @@ use DoSomething\MB_Toolbox\MB_Toolbox;
 require_once __DIR__ . '/mbc-digest-email.config.inc';
 
 // Create objects for injection into MBC_ImageProcessor
-$mb = new MessageBroker($credentials, $config);
+$mb = new MessageBroker($credentials['rabbit'], $config);
 $sh = new StatHat([
-  'ez_key' => $settings['stathat_ez_key'],
-  'debug' => $settings['stathat_disable_tracking']
+  'ez_key' => $credentials['stathat']['stathat_ez_key'],
+  'debug' => $credentials['stathat']['stathat_disable_tracking']
 ]);
 $tb = new MB_Toolbox($settings);
 
@@ -32,9 +32,6 @@ $tb = new MB_Toolbox($settings);
 echo '------- mbc-user-digest START: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
 
 // Kick off
-$mbcDigestEmail = new MBC_UserDigest($credentials, $config, $settings);
-
-// Process digest message requests by mbp-user-digest
-$mbcDigestEmail->generateDigests();
+$mbcDigestEmail = new MBC_UserDigest($credentials['rabbit'], $config, $settings);
 
 echo '------- mbc-user-digest END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
