@@ -26,7 +26,7 @@ $credentials = array(
   ),
   'stathat' => array(
     'ez_key' => getenv("STATHAT_EZKEY"),
-    'use_stathat_tracking' => getenv("USE_STAT_TRACKING"),
+    'stathat_disable_tracking' => getenv('DISABLE_STAT_TRACKING'),
   ),
   'ds_drupal_api' => array(
     'host' => getenv('DS_DRUPAL_API_HOST'),
@@ -34,6 +34,9 @@ $credentials = array(
     'username' => getenv("DS_DRUPAL_API_USERNAME"),
     'password' => getenv("DS_DRUPAL_API_PASSWORD"),
   ),
+);
+
+$settings = array(
   'mb_user_api' => array(
     'host' =>  getenv("MB_USER_API_HOST"),
     'port' =>  getenv("MB_USER_API_PORT"),
@@ -44,19 +47,10 @@ $credentials = array(
     'port' => getenv("SUBSCRIPTIONS_PORT"),
   )
 );
-$settings = array(
-  'stathat_ez_key' => getenv("STATHAT_EZKEY"),
-  'use_stathat_tracking' => getenv("USE_STAT_TRACKING"),
-  'ds_drupal_api_host' => getenv('DS_DRUPAL_API_HOST'),
-  'ds_drupal_api_port' => getenv('DS_DRUPAL_API_PORT'),
-  'ds_drupal_api_username' => getenv("DS_DRUPAL_API_USERNAME"),
-  'ds_drupal_api_password' => getenv("DS_DRUPAL_API_PASSWORD"),
-  'ds_user_api_host' =>  getenv("DS_USER_API_HOST"),
-  'ds_user_api_port' =>  getenv("DS_USER_API_PORT"),
-  'subscriptions_url' => getenv("SUBSCRIPTIONS_URL"),
-  'subscriptions_ip' => getenv("SUBSCRIPTIONS_IP"),
-  'subscriptions_port' => getenv("SUBSCRIPTIONS_PORT"),
-);
+
+// Added to support o dosomething/mb-stat-tracker library use  in MB_Toolbox.
+// Remove after library has been ipgraded to dosomething/stathat
+$settings['stathat_ez_key'] = getenv("STATHAT_EZKEY");
 
 $mbConfig = new MB_Configuration($settings, CONFIG_PATH . '/mb_config.json');
-$config = $mbConfig->constructConfig('userDigestExchange', array('userDigestQueue'));
+$config = $mbConfig->constructConfig('directUserDigestExchange', array('userDigestQueue'));
