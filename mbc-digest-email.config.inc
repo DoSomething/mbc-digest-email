@@ -1,4 +1,13 @@
 <?php
+/**
+ * Message Broker configuration settings for mbc-user-digest
+ */
+
+use DoSomething\MB_Toolbox\MB_Configuration;
+
+// Load configuration settings common to the Message Broker system
+// symlinks in the project directory point to the actual location of the files
+require_once __DIR__ . '/messagebroker-config/mb-secure-config.inc';
 
 // Settings
 $credentials = array(
@@ -49,38 +58,5 @@ $settings = array(
   'subscriptions_port' => getenv("SUBSCRIPTIONS_PORT"),
 );
 
-$mbcRabbitMQManagementAPI = new MBC_RabbitMQManagementAPI($credentials);
-$exchangeName = 'directUserDigestExchange';
-$targetQueue = $mbcRabbitMQManagementAPI->nextQueue($exchangeName);
-
-$config = array();
-$source = __DIR__ . '/messagebroker-config/mb_config.json';
-$mb_config = new MB_Configuration($source, $settings);
-$userDigestExchange = $mb_config->exchangeSettings('directUserDigestExchange');
-
-$config = array(
-  'exchange' => array(
-    'name' => $userDigestExchange->name,
-    'type' => $userDigestExchange->type,
-    'passive' => $userDigestExchange->passive,
-    'durable' => $userDigestExchange->durable,
-    'auto_delete' => $userDigestExchange->auto_delete,
-  ),
-  'queue' => array(
-    array(
-      'name' => $targetQueue,
-      'passive' => $userDigestExchange->queues->userDigestQueue->passive,
-      'durable' =>  $userDigestExchange->queues->userDigestQueue->durable,
-      'exclusive' =>  $userDigestExchange->queues->userDigestQueue->exclusive,
-      'auto_delete' =>  $userDigestExchange->queues->userDigestQueue->auto_delete,
-      'bindingKey' => $targetQueue,
-    ),
-  ),
-  'consume' => array(
-    'consumer_tag' => $targetQueue,
-    'no_local' => $userDigestExchange->queues->userDigestQueue->consume->no_local,
-    'no_ack' => $userDigestExchange->queues->userDigestQueue->consume->no_ack,
-    'exclusive' => $userDigestExchange->queues->userDigestQueue->consume->exclusive,
-    'nowait' => $userDigestExchange->queues->userDigestQueue->consume->nowait,
-  ),
-);
+$mbConfig = new MB_Configuration($settings, CONFIG_PATH . '/mb_config.json');
+$config = $mbConfig->constructConfig('userDigestExchange', array('userDigestQueue'));
