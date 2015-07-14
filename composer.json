@@ -26,7 +26,7 @@
   },
   "autoload": {
     "psr-4": {
-      "DoSomething\\MBC_Digest_Email\\": "src/"
+      "DoSomething\\MBC_DigestEmail\\": "src/"
     }
   },
   "scripts": {
