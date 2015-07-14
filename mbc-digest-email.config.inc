@@ -25,7 +25,7 @@ $credentials = array(
     'password' => getenv("MB_RABBITMQ_MANAGEMENT_API_PASSWORD"),
   ),
   'stathat' => array(
-    'ez_key' => getenv("STATHAT_EZKEY"),
+    'stathat_ez_key' => getenv("STATHAT_EZKEY"),
     'stathat_disable_tracking' => getenv('DISABLE_STAT_TRACKING'),
   ),
   'ds_drupal_api' => array(
