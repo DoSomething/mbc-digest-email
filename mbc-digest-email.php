@@ -12,7 +12,7 @@ define('CONFIG_PATH',  __DIR__ . '/messagebroker-config');
 
 // Load up the Composer autoload magic
 require_once __DIR__ . '/vendor/autoload.php';
-use DoSomething\MBC_DigestEmail\MBC_DigestEmail;
+use DoSomething\MBC_DigestEmail\MBC_DigestEmailConsumer;
 
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
@@ -30,8 +30,5 @@ $tb = new MB_Toolbox($settings);
 
 
 echo '------- mbc-user-digest START: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
-
-// Kick off
-$mbcDigestEmail = new MBC_UserDigest($credentials['rabbit'], $config, $settings);
-
+$mb->consumeMessage(array(new MBC_DigestEmailConsumer($mb, $sh, $tb, $settings), 'consumeUserDigestQueue'));
 echo '------- mbc-user-digest END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
