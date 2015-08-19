@@ -1,7 +1,7 @@
 {
   "name": "DoSomething/mbc-user-digest",
   "type": "project",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A consumer app for the Message Broker system that consumes entries on the userDigestQueue. Queue payload entries determine the user accounts (email) to send campaign activity digest email messages with a Mandrill API submission.",
   "keywords": ["message broker", "digest", "email"],
   "homepage": "https://github.com/DoSomething/mbc-digest-email",
