@@ -24,7 +24,7 @@ use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
  * MBC_UserRegistration class - functionality related to the Message Broker
  * consumer mbc-registration-email.
  */
-class MBC_DigestEmailConsumer extends MB_Toolbox_BaseConsumer {
+class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   
   /**
    * Initial method triggered by blocked call in base mbc-??-??.php file. The $payload is the
