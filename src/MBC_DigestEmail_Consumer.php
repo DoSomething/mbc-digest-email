@@ -30,6 +30,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Do creation in config singleton
 
     // Create campaign object
+
     // Create Mandill Service object
 
   }
@@ -89,17 +90,19 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
       // List of campaign ids
       foreach($userProperty['campaigns'] as $campaign) {
-        $mbcDigestEmailUser->campaigns[] = array(
-          'nid' => $campaign['nid'],
-          'markup' => $this->campaigns->getMarkup($campaign['nid']),
-        );
+        if ($this->canSetCampaign($this->mbcCampaigns->getCampaign($campaign))) {
+          $mbcDigestEmailUser->campaigns[] = array(
+            'nid' => $campaign['nid'],
+            'markup' => $this->mbcCampaigns->getMarkup($campaign['nid']),
+          );
+        }
       }
 
       // Drupal_uid
       // Message ID for ack_back
 
       // unsubscribe link
-      $mbcDigestEmailUser->unsubscribe_link = $this->unsubscribe->getLink($userProperty['nid']);
+      $mbcDigestEmailUser->unsubscribe_link = $this->MB_Toolbox->getUnsubscribeLink($userProperty['nid']);
 
     }
 
