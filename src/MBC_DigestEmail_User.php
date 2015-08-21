@@ -32,13 +32,23 @@ class MBC_DigestEmail_User
     else {
       return FALSE;
     }
+
+    $this->mbConfig = MB_Configuration::getInstance();
+    $this->statHat = $this->mbConfig->getProperty('statHat');
+    $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
   }
 
   /**
-   *
+   * setFirstName:
    */
-  public function setFirstName() {
+  public function setFirstName($firstName) {
 
+    if ($firstName == NULL) {
+      $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
+    }
+    else {
+      $this->firstName = $firstName;
+    }
   }
 
   /**
