@@ -11,41 +11,6 @@ class MBC_DigestEmail_DigestMessage extends MBC_DigestEmail_BaseMessage {
   /**
    *
    */
-  private $contentAreas = [];
-
-  /**
-   *
-   */
-  private $templateFile = '';
-
-  /**
-   *
-   */
-  private $fromName = '';
-
-  /**
-   *
-   */
-  private $fromEmail = '';
-
-  /**
-   *
-   */
-  private $subject = '';
-
-  /**
-   *
-   */
-  private $dispatchWindowStart;
-
-  /**
-   *
-   */
-  private $dispatchWindowEnd;
-
-  /**
-   *
-   */
   public function __construct($targetMessage) {
 
     // Build message with merge_vars
@@ -63,14 +28,14 @@ class MBC_DigestEmail_DigestMessage extends MBC_DigestEmail_BaseMessage {
           'digest-2015-08-20_body.inc',
           [
             'BODY_COPY' => new MBC_DigestEmail_BodyCopyContent('digest-2015-08-20_bodycopy.inc'),
-            'CAMPAIGNS' => new MBC_DigestEmail_CampaignContent('digest-2015-08-20_bodycampaigns.inc'),
+            'CAMPAIGNS' => new MBC_DigestEmail_CampaignsContent('digest-2015-08-20_bodycampaigns.inc'),
           ]
       );
       $footerContent = new MBC_DigestEmail_FooterContent(
         'digest-2015-08-20_footer.inc',
         [
           'FOOTER_BYLINE' => new MBC_DigestEmail_BylineContent('digest-2015-08-20_footerbyline.inc'),
-          'FOOTER_COPY' => new MBC_DigestEmail_UnsubscribeContent('digest-2015-08-20_footercopy.inc'),
+          'FOOTER_COPY' => new MBC_DigestEmail_CopyrightContent('digest-2015-08-20_footercopy.inc'),
         ]
       );
 
@@ -87,7 +52,7 @@ class MBC_DigestEmail_DigestMessage extends MBC_DigestEmail_BaseMessage {
       $this->dispatchWindowStart = '';
       $this->dispatchWindowEnd = '';
       
-      $this->setTemplateMarkup();
+      $this->buildTemplateMarkup();
 
     }
     else {
@@ -99,8 +64,8 @@ class MBC_DigestEmail_DigestMessage extends MBC_DigestEmail_BaseMessage {
   /**
    *
    */
-  public function setTemplateMarkup() {
-    
+  public function buildTemplateMarkup() {
+
     // Load page template
     $markup = parent::getMessageTemplate($this->templateFile);
     
