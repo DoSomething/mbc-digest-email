@@ -51,20 +51,28 @@ class MBC_DigestEmail_DigestMessage extends MBC_DigestEmail_BaseMessage {
     // Build message with merge_vars
     if ($targetMessage == 'digest-2015-08-20') {
 
-      $preheaderContent = [
-        new MBC_DigestEmail_PreHeaderContent(),
-      ];
-      $headerContent = [
-        new MBC_DigestEmail_HeaderContent(),
-      ];
-      $bodyContent = [
-        new MBC_DigestEmail_CopyContent(),
-        new MBC_DigestEmail_CampaignContent(),
-      ];
-      $footerContent = [
-        new MBC_DigestEmail_BylineContent(),
-        new MBC_DigestEmail_UnsubscribeContent(),
-      ];
+      $preheaderContent = new MBC_DigestEmail_PreHeaderContent(
+        'digest-2015-08-20_preheader.inc',
+        NULL
+      );
+      $headerContent = new MBC_DigestEmail_HeaderContent(
+        'digest-2015-08-20_header.inc',
+        NULL
+      );
+      $bodyContent = new MBC_DigestEmail_BodyContent(
+          'digest-2015-08-20_body.inc',
+          [
+            'BODY_COPY' => new MBC_DigestEmail_BodyCopyContent('digest-2015-08-20_bodycopy.inc'),
+            'CAMPAIGNS' => new MBC_DigestEmail_CampaignContent('digest-2015-08-20_bodycampaigns.inc'),
+          ]
+      );
+      $footerContent = new MBC_DigestEmail_FooterContent(
+        'digest-2015-08-20_footer.inc',
+        [
+          'FOOTER_BYLINE' => new MBC_DigestEmail_BylineContent('digest-2015-08-20_footerbyline.inc'),
+          'FOOTER_COPY' => new MBC_DigestEmail_UnsubscribeContent('digest-2015-08-20_footercopy.inc'),
+        ]
+      );
 
       $this->contentAreas = [
         'PREHEADER' => new MBC_DigestEmail_ContentArea($preheaderContent),
