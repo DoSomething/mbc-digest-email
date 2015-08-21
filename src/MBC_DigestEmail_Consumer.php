@@ -83,8 +83,22 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Loop through message to set user values
     foreach ($message as $userProperty) {
 
+      // First name
+      if (!(isset($userProperty['first_name']))) {
+        $userProperty['first_name'] = '';
+      }
       $mbcDEUser->setFirstName($userProperty['first_name']);
+
+      // Language preference
+      if (!(isset($userProperty['source']))) {
+        $userProperty['source'] = 'US';
+      }
       $mbcDEUser->setLanguage($userProperty['source']);
+
+      // Drupal UID
+      if (!(isset($userProperty['drupal_uid']))) {
+        $userProperty['drupal_uid'] = '';
+      }
       $mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
 
       // List of campaign ids
@@ -99,11 +113,11 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       }
 
       // Message ID for ack_back
-
+      $mbcDEUser->setMessageID($message->delivery_info['delivery_tag']);
 
     }
 
-    // ... set user object
+    // Add user object to users property of current instance of Consumer class.
     $this->users[] = $mbcDEUser;
   }
 
