@@ -24,27 +24,16 @@ use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
  * - Trigger sending batches of digest messages.
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
+  
+  /**
+   *
+   */
+  private $users = [];
 
   /**
    *
    */
   private $messageMarkup;
-
-  /**
-   *
-   */
-  function __construct() {
-
-    echo 'MBC_DigestEmail_Consumer->__constructor() processed...', PHP_EOL;
-
-    // Create message object
-    $mbcDE_DM = new MBC_DigestEmail_DigestMessage('digest-2015-08-20');
-    $this->messageMarkup = $mbcDE_DM->getTemplateMarkup();
-
-    // Create campaign object
-    // Create Mandill Service object
-
-  }
 
   /**
    * Coordinate processing of messages consumed fromn the target queue defined in the
@@ -89,35 +78,33 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   protected function setter($message) {
 
     // Create new user object
-    $mbcDigestEmailUser = new MBC_DigestEmail_User();
+    $mbcDEUser = new MBC_DigestEmail_User($message['email']);
 
     // Loop through message to set user values
     foreach ($message as $userProperty) {
 
-    // Properties found for:
-      // first_name, set to default if missing value
-      // Country / affiliate (stub for future use)
+      $mbcDEUser->setFirstName($userProperty['first_name']);
+      $mbcDEUser->setLanguage($userProperty['source']);
+      $mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
 
       // List of campaign ids
       foreach($userProperty['campaigns'] as $campaign) {
-        if ($this->canSetCampaign($this->mbcCampaigns->getCampaign($campaign))) {
-          $mbcDigestEmailUser->campaigns[] = array(
-            'nid' => $campaign['nid'],
-            'markup' => $this->mbcCampaigns->getMarkup($campaign['nid']),
-          );
+        if (isset($this->campaigns[$campaign['nid']])) {
+          $mbcDEUser->addCampaign($this->campaigns[$casmpaign['nid']]);
         }
+        else {
+          $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign->nid);
+        }
+        $mbcDEUser->addCampaign($mbcDECampaign);
       }
 
-      // Drupal_uid
       // Message ID for ack_back
 
-      // unsubscribe link
-      $mbcDigestEmailUser->unsubscribe_link = $this->MB_Toolbox->getUnsubscribeLink($userProperty['nid']);
 
     }
 
     // ... set user object
-    $this->users[] = $mbcDigestEmailUser;
+    $this->users[] = $mbcDEUser;
   }
 
   /**
