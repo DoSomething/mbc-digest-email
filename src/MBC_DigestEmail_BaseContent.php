@@ -28,7 +28,7 @@ abstract class MBC_DigestEmail_BaseContent {
   /**
    *
    */
-  private function getTemplate($targetTemplate) {
+  private function getTemplate($templateFile) {
 
     $targetFile = __DIR__ . '/../templates/' . $templateFile;
     try {
