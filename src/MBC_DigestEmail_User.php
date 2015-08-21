@@ -15,19 +15,25 @@ class MBC_DigestEmail_User
   const SUBSCRIPTION_LINK_STL = 1814400;
 
   /**
+   * The first name of the user. Defaults to "Doer" when value is not set.
+   *
+   * @var string
+   */
+  protected $firstName;
+
+  /**
    * __construct: When a new instance of the class is created it must include an email address. An
    * email address is the minimum value needed to work with Digest User related functionality.
    *
-   * @parm string $email
+   * @parm string $email (required)
    * 
-   * 
+   * @return boolean
    */
   public function __construct($email) {
 
     // Validate structure and existing TLD (top level domain) for address
     if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
       $this->email = $email;
-      return TRUE;
     }
     else {
       return FALSE;
@@ -36,19 +42,31 @@ class MBC_DigestEmail_User
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
+
+    return TRUE;
   }
 
   /**
-   * setFirstName:
+   * setFirstName: Set the user first name.
    */
   public function setFirstName($firstName) {
 
-    if ($firstName == NULL) {
-      $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
+    $this->firstName = $firstName;
+  }
+
+  /**
+   * getFirstName: gether user first name. If value does not exist use default user name value.
+   *
+   * @return string firstName
+   */
+  public function getFirstName() {
+
+    if (isset($this->firstName)) {
+      return $this->firstName;
     }
-    else {
-      $this->firstName = $firstName;
-    }
+
+    $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
+    return $this->firstName;
   }
 
   /**
