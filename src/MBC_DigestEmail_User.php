@@ -10,18 +10,58 @@ namespace DoSomething\MBC_DigestEmail;
  */
 class MBC_DigestEmail_User
 {
-  
+
   // Three weeks, 60 seconds x 60 minutes x 24 hours x 3 weeks
   const SUBSCRIPTION_LINK_STL = 1814400;
-  
+
+  /**
+   * __construct: When a new instance of the class is created it must include an email address. An
+   * email address is the minimum value needed to work with Digest User related functionality.
+   *
+   * @parm string $email
+   * 
+   * 
+   */
+  public function __construct($email) {
+
+    // Validate structure and existing TLD (top level domain) for address
+    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+      $this->email = $email;
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
   /**
    *
    */
-  public function __construct() {
-    
-    
+  public function setFirstName() {
+
   }
-  
+
+  /**
+   *
+   */
+  public function setLanguage() {
+
+  }
+
+  /**
+   *
+   */
+  public function setDrupalUID() {
+
+  }
+
+  /**
+   *
+   */
+  public function addCampaign() {
+
+  }
+
   /**
    *
    */
@@ -53,6 +93,5 @@ class MBC_DigestEmail_User
 
     return $this->subscriptions['url'];
   }
-
 
 }
