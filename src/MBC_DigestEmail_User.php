@@ -15,11 +15,46 @@ class MBC_DigestEmail_User
   const SUBSCRIPTION_LINK_STL = 1814400;
 
   /**
+   * Singleton instance of application configuration settings.
+   *
+   * @var object
+   */
+   private $mbConfig;
+
+  /**
+   * Singleton instance of class used to report usage statistics.
+   *
+   * @var object
+   */
+   private $statHat;
+
+  /**
+   * A collection of tools used by all of the Message Broker applications.
+   *
+   * @var object
+   */
+   private $mbToolbox;
+
+  /**
+   * The valid email address of the user.
+   *
+   * @var string
+   */
+  protected $email;
+
+  /**
    * The first name of the user. Defaults to "Doer" when value is not set.
    *
    * @var string
    */
   protected $firstName;
+
+  /**
+   * The campaigns the user digest message will contain as active and needing report backs.
+   *
+   * @var array
+   */
+  protected $campaigns = [];
 
   /**
    * __construct: When a new instance of the class is created it must include an email address. An
@@ -84,33 +119,49 @@ class MBC_DigestEmail_User
   }
 
   /**
+   * RabbitMQ message ID used to create the user object. Once the message has been fully processed
+   * the orginal message will be achknoledged and removed from the queue. This property will also
+   * be unset.
    *
+   * @var integer $messageID
    */
-  public function addCampaign() {
+  public function setMessageID($messageID) {
 
+  }
+
+  /**
+   * addCampaign: Add a campaign object to a list of campaign objects the user is active in.
+   *
+   * @parm object campaign
+   */
+  public function addCampaign($campaign) {
+
+    if (!(isset($this->campaigns[$campaign->nid]))) {
+      $this->campaigns[$campaign->nid] = $campaign;
+    }
   }
 
   /**
    *
    */
   public function getSubsciptionsURL() {
-    
+
     // Return cached existing link
     if (isset($this->subscriptions)) {
-      
+
       // More meaningful functionality when links are stored and retrieved in ds-digest-api as
       // persistant storage between digest runs. Long term storage will result in expired links over time.
       $expiryTimestamp = time() - self::SUBSCRIPTION_LINK_STL;
       if (isset($this->subscriptions['created']) && $this->subscriptions['created'] < date("Y-m-d H:i:s", $expiryTimestamp)) {
         return $this->buildSubscriptionsLink();
       }
-      
+
       return $this->subscriptions['url'];
     }
 
     return $this->buildSubscriptionsLink();
   }
-  
+
   /**
    *
    */
