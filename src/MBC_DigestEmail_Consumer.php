@@ -25,12 +25,23 @@ use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
+  /**
+   *
+   */
+  private $messageMarkup;
+
+  /**
+   *
+   */
   function __construct() {
 
-    // Do creation in config singleton
+    echo 'MBC_DigestEmail_Consumer->__constructor() processed...', PHP_EOL;
+
+    // Create message object
+    $mbcDE_DM = new MBC_DigestEmail_DigestMessage('digest-2015-08-20');
+    $this->messageMarkup = $mbcDE_DM->getTemplateMarkup();
 
     // Create campaign object
-
     // Create Mandill Service object
 
   }
@@ -42,12 +53,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    * @param array $message
    *  The payload of the unserialized message being processed.
    */
-  protected function consumeUserDigestQueue($message) {
+  protected function consumeDigestUserQueue($message) {
 
-    // Process message into basic format
     parent::consumeQueue();
-
-
 
     if (count($this->users) <= self::BATCH_SIZE) {
 
@@ -62,9 +70,11 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       }
 
     }
-    // Send batch of users digest message
+    // Send batch of user digest messages
     else {
-      $mbcDigestEmailMandrillService->sendDigestBatch($this->users);
+
+      // @todo: Support different services based on interface base class
+      $mbcDigestEmailMandrillService->sendDigestBatch($this->messageTemplate, $this->users);
       unset($this->users);
     }
 
@@ -108,7 +118,6 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     // ... set user object
     $this->users[] = $mbcDigestEmailUser;
-
   }
 
   /**
@@ -118,9 +127,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    * @param array $message
    *  The payload of the message being processed.
    */
-  protected function canProcess($message) {
+  protected function canProcess() {
 
-    if (!isset($message['email'])) {
+    if (!isset($this->message['email'])) {
       echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing email.', PHP_EOL;
       return FALSE;
     }
@@ -140,6 +149,12 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Get last user set
     $user = array_pop($this->users);
 
+    $user->merge_vars['FNAME'] = '';
+    $user->merge_vars['CAMPAIGNS'] = '';
+    $user->merge_vars['UNSUBSCRIBE_LINK'] = '';
+
+    $user = $this->getCommonMergeVars($user);
+
     // Processed OK, add user back to class property
     if ($processOK) {
       $this->users[] = $user;
@@ -148,6 +163,16 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       // Log the user was not processed
     }
 
+  }
+
+  /**
+   *
+   */
+  private function getCommonMergeVars($user) {
+
+    $user->merge_vars['MEMBER_COUNT'] = '';
+
+    return $user;
   }
 
 }
