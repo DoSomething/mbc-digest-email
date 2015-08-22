@@ -24,7 +24,7 @@ use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
  * - Trigger sending batches of digest messages.
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
-  
+
   /**
    *
    */
@@ -34,6 +34,25 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    *
    */
   private $messageMarkup;
+
+  /**
+   *
+   */
+  private $mbcDEMandrillMessanger;
+
+  /**
+   *
+   */
+  public function __contruct() {
+
+    // Future support of different Services other than Mandrill
+    // could be toggled at this point with logic for user origin.
+    // See mbc-registration-mobile for working example of toggling
+    // Based on user origin.
+
+    // Create new Message object for user.
+    $this->mbcDEMandrillMessanger = new MBC_DigestEmail_MandrillMessenger($user);
+  }
 
   /**
    * Coordinate processing of messages consumed fromn the target queue defined in the
@@ -63,7 +82,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     else {
 
       // @todo: Support different services based on interface base class
-      $mbcDigestEmailMandrillService->sendDigestBatch($this->messageTemplate, $this->users);
+      $status = $this->mbcDEMandrillMessanger->sendDigestBatch();
+      $this->logStatus();
+
       unset($this->users);
     }
 
@@ -142,28 +163,10 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    */
   protected function process() {
 
-    // Get last user set
+    // Get last user to now process
     $user = array_pop($this->users);
 
-
-    // BUILD MESSAGE Object
-
-    $user->merge_vars['FNAME'] = '';
-    $user->merge_vars['CAMPAIGNS'] = '';
-    $user->merge_vars['UNSUBSCRIBE_LINK'] = '';
-
-    $user = $this->getCommonMergeVars($user);
-
-    // Processed OK, add user back to class property
-    if ($processOK) {
-      $this->users[] = $user;
-    }
-    else {
-      // Log the user was not processed
-    }
-
-
-    // SEND TO SERVICE Object
+    $this->mbcDEMandrillMessanger->addUser($user);
 
   }
 
