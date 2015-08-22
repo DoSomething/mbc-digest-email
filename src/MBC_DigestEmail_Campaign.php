@@ -33,6 +33,62 @@ class MBC_DigestEmail_Campaign {
 
   /**
    *
+   *
+   * @var
+   */
+   private $title;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $drupal_nid;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $is_staff_pick;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $url;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $image_campaign_cover;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $call_to_action;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $fact_problem;
+
+  /**
+   *
+   *
+   * @var
+   */
+   private $latest_news;
+
+  /**
+   *
    */
   function __construct($nid) {
 
@@ -40,14 +96,60 @@ class MBC_DigestEmail_Campaign {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
-    $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
+    $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
   }
 
   /**
+   * Populate object properties based on campaign lookup on Drupal site.
+   *
    *
    */
-  private function add() {
+  private function add($nid) {
 
+    $settings = $this->gatherSettings($nid);
+    if ($campaignSettings == FALSE) {
+      return FALSE;
+    }
+
+    $this->title = $setting->title;
+    $this->drupal_nid = $setting->nid;
+    $this->is_staff_pick = $setting->is_staff_pick;
+    $this->url = 'http://www.dosomething.org/node/' . $campaign->nid . '#prove';
+    $this->image_campaign_cover = $setting->image_cover->src;
+    $this->call_to_action = $setting->call_to_action;
+    $this->fact_problem = $setting->fact_problem->fact;
+    $this->latest_news = $setting->latest_news_copy;
   }
 
+  /**
+   * Gather campaign properties based on campaign lookup on Drupal site.
+   *
+   * @param integer $nid
+   *   The Drupal nid (node ID) of the terget campaign.
+   *
+   * @return object
+   *   The returned results from the call to the campaign endpoint on the Drupal site.
+   *   Return boolean FALSE if request is unsuccessful.
+   */
+  private function gatherSettings($nid) {
+
+    $dsDrupalAPIConfig = $this->mbConfig->getProperty('ds_drupal_api_config');
+    $curlUrl = $dsDrupalAPIConfig['host'];
+    $curlUrl = $dsDrupalAPIConfig['port'];
+    if ($port != 0 && is_numeric($port)) {
+      $curlUrl .= ':' . (int) $port;
+    }
+
+    $campaignAPIUrl = $curlUrl . '/api/v1/content/' . $nid;
+    $result = $this->mbToolboxcURL->curlGET($campaignAPIUrl);
+
+    // Exclude campaigns that don't have details in Drupal API or "Access
+    // denied" due to campaign no longer published
+    if ($result != NULL && (is_array($result) && $result[0] !== FALSE)) {
+      return $result[0];
+    }
+    else {
+      return FALSE;
+    }
+  }
 }
