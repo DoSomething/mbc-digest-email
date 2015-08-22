@@ -110,6 +110,13 @@ class MBC_DigestEmail_Campaign {
 
   /**
    *
+   *
+   * @var
+   */
+   private $markup;
+
+  /**
+   *
    */
   function __construct($nid) {
 
@@ -143,6 +150,8 @@ class MBC_DigestEmail_Campaign {
     $this->fact_solution = $setting->fact_solution->fact;
     $this->during_tip_header = $setting->step_pre[0]->header;
     $this->during_tip = strip_tags($campaign->step_pre[0]->copy);
+
+    $this->generateMarkup();
   }
 
   /**
@@ -175,5 +184,18 @@ class MBC_DigestEmail_Campaign {
     else {
       return FALSE;
     }
+
+  }
+
+  /**
+   *
+   */
+  private function generateMarkup() {
+
+    // gater template
+    // marge object settings in template merge_var markers
+
+    $this->markup = '';
+
   }
 }
