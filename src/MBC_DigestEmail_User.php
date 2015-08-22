@@ -12,6 +12,8 @@ class MBC_DigestEmail_User
 {
 
   // Three weeks, 60 seconds x 60 minutes x 24 hours x 3 weeks
+  // STD = Seconds To Die
+  // What, you were thinking something else for "STD"?!?
   const SUBSCRIPTION_LINK_STL = 1814400;
 
   /**
@@ -123,22 +125,23 @@ class MBC_DigestEmail_User
    * the orginal message will be achknoledged and removed from the queue. This property will also
    * be unset.
    *
-   * @var integer $messageID
+   * @var object $message
+   *   The orginal message consumed from the RabbitMQ queue.
    */
-  public function setMessageID($messageID) {
+  public function setMessageID($message) {
 
+    $this->messageID = $message->delivery_info['delivery_tag'];
   }
 
   /**
    * addCampaign: Add a campaign object to a list of campaign objects the user is active in.
+   * If the campaign is already on the list the object will be updated.
    *
    * @parm object campaign
    */
   public function addCampaign($campaign) {
 
-    if (!(isset($this->campaigns[$campaign->nid]))) {
-      $this->campaigns[$campaign->nid] = $campaign;
-    }
+    $this->campaigns[$campaign->nid] = $campaign;
   }
 
   /**
@@ -151,7 +154,7 @@ class MBC_DigestEmail_User
 
       // More meaningful functionality when links are stored and retrieved in ds-digest-api as
       // persistant storage between digest runs. Long term storage will result in expired links over time.
-      $expiryTimestamp = time() - self::SUBSCRIPTION_LINK_STL;
+      $expiryTimestamp = time() - self::SUBSCRIPTION_LINK_STD;
       if (isset($this->subscriptions['created']) && $this->subscriptions['created'] < date("Y-m-d H:i:s", $expiryTimestamp)) {
         return $this->buildSubscriptionsLink();
       }
