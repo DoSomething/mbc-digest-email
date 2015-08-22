@@ -80,42 +80,37 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Create new user object
     $mbcDEUser = new MBC_DigestEmail_User($message['email']);
 
-    // Loop through message to set user values
-    foreach ($message as $userProperty) {
-
-      // First name
-      if (!(isset($userProperty['first_name']))) {
-        $userProperty['first_name'] = '';
-      }
-      $mbcDEUser->setFirstName($userProperty['first_name']);
-
-      // Language preference
-      if (!(isset($userProperty['source']))) {
-        $userProperty['source'] = 'US';
-      }
-      $mbcDEUser->setLanguage($userProperty['source']);
-
-      // Drupal UID
-      if (!(isset($userProperty['drupal_uid']))) {
-        $userProperty['drupal_uid'] = '';
-      }
-      $mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
-
-      // List of campaign ids
-      foreach($userProperty['campaigns'] as $campaign) {
-        if (isset($this->campaigns[$campaign['nid']])) {
-          $mbcDEUser->addCampaign($this->campaigns[$casmpaign['nid']]);
-        }
-        else {
-          $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign->nid);
-        }
-        $mbcDEUser->addCampaign($mbcDECampaign);
-      }
-
-      // Message ID for ack_back
-      $mbcDEUser->setMessageID($message->delivery_info['delivery_tag']);
-
+    // First name
+    if (!(isset($userProperty['first_name']))) {
+      $userProperty['first_name'] = '';
     }
+    $mbcDEUser->setFirstName($userProperty['first_name']);
+
+    // Language preference
+    if (!(isset($userProperty['source']))) {
+      $userProperty['source'] = 'US';
+    }
+    $mbcDEUser->setLanguage($userProperty['source']);
+
+    // Drupal UID
+    if (!(isset($userProperty['drupal_uid']))) {
+      $userProperty['drupal_uid'] = '';
+    }
+    $mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
+
+    // List of campaign ids
+    foreach($userProperty['campaigns'] as $campaign) {
+      if (isset($this->campaigns[$campaign['nid']])) {
+        $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
+      }
+      else {
+        $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign->nid);
+      }
+      $mbcDEUser->addCampaign($mbcDECampaign);
+    }
+
+    // Set message ID for ack_back
+    $mbcDEUser->setMessageID($message);
 
     // Add user object to users property of current instance of Consumer class.
     $this->users[] = $mbcDEUser;
@@ -150,6 +145,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Get last user set
     $user = array_pop($this->users);
 
+
+    // BUILD MESSAGE Object
+
     $user->merge_vars['FNAME'] = '';
     $user->merge_vars['CAMPAIGNS'] = '';
     $user->merge_vars['UNSUBSCRIBE_LINK'] = '';
@@ -164,6 +162,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       // Log the user was not processed
     }
 
+
+    // SEND TO SERVICE Object
+
   }
 
   /**
@@ -172,6 +173,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   private function getCommonMergeVars($user) {
 
     $user->merge_vars['MEMBER_COUNT'] = '';
+    $user->merge_vars['CURRENT_YEAR'] = '';
 
     return $user;
   }
