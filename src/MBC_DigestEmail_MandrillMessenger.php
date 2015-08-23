@@ -42,16 +42,29 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private $mandrill;
 
+  /**
+   *
+   */
+  private $globalMergeVars;
+
   /*
    *
    */
   public function __construct($campaigns) {
 
+    // Application configuration
+    $this->mbConfig = MB_Configuration::getInstance();
+    $this->statHat = $this->mbConfig->getProperty('statHat');
+    $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
+
+    // Resources for building digest batch
     $this->campaigns = $campaigns;
     $this->userIndex = 0;
     $this->campaignTempate = parent::gatherTemplate('campaign-markup.inc');
     $this->campaignTempateDivider = parent::gatherTemplate('campaign-divider-markup.inc');
     $this->mandrill = new Mandrill();
+    $this->memberCount = $this->mbToolbox->getDSMemberCount();
+    $this->globalMergeVars = setGlobalMergeVars();
   }
 
   /**
@@ -101,6 +114,45 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     foreach($user->campaigns as $campaign) {
       str_replace($this->campaignTempate, '');
     }
+  }
+
+  /**
+   *
+   */
+  private function setGlobalMergeVars() {
+
+    $memberCount = $this->memberCount;
+    $currentYear = date('Y');
+
+    $this->globalMergeVars = [
+      'MEMBER_COUNT' => $memberCount,
+      'CURRENT_YEAR' => $currentYear,
+    ];
+  }
+
+  /**
+   * getGlobalMergeVars(): Formatted global merge var values based on
+   * Mandrill send-template API spec:
+   * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
+   *
+   * Global merge variables to use for all recipients. You can override these
+   * per recipient.
+   *
+   * @return array $globalMergeVars
+   *   A formatted array of global merge var values to be sent with
+   *   digest batch.
+   *
+   */
+  private function getGlobalMergeVars() {
+
+    foreach($this->globalMergeVars as $name => $content) {
+      $globalMergeVars[] = [
+        'name' => $name,
+        'content' => $content
+      ];
+    }
+
+    return $globalMergeVars;
   }
 
   /**
@@ -167,12 +219,59 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /*
+   * getDigestMessageSubject(): Generate the message subject text.
+   *
+   * @return string $subject
+   *   The dynamically generated message subject based on a list that
+   *   will change weekly.
+   */
+  private function getDigestMessageSubject() {
+
+    $subjects = array(
+      'Your weekly DoSomething campaign digest',
+      'Your weekly DoSomething.org campaign roundup!',
+      'A weekly campaign digest just for you!',
+      'Your weekly campaign digest: ' . date('F j'),
+      date('F j') . ': Your weekly campaign digest!',
+      'Tips for your DoSomething.org campaigns!',
+      'Comin\' atcha: tips for your DoSomething.org campaign!',
+      '*|FNAME|* - It\'s your ' . date('F j') . ' campaign digest',
+      'Just for you: DoSomething.org campaign tips',
+      'Your weekly campaign tips from DoSomething.org',
+      date('F j') . ': campaign tips from DoSomething.org',
+      'You signed up for campaigns. Here\'s how to rock them!',
+      'Tips for you (and only you!)',
+      'Ready for your weekly campaign tips?',
+      'Your weekly campaign tips: comin\' atcha!',
+      'Fresh out the oven (just for you!)',
+    );
+    // Sequenilly select an item from the list of subjects, a different one
+    // every week and start from the top once the end of the list is reached
+    $subjectCount = (int) abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
+
+    return $subjects[$subjectCount];
+  }
+
+  /*
+   * getDigestMessageFrom(): Generate the message from name and email adddress.
+   *
+   * @return array $from
+   *   String values of the sender of the digest message.
+   */
+  private function getDigestMessageFrom() {
+
+    $from = [
+      'email' => 'noreply@dosomething.org',
+      'name' => 'Ben, DoSomething.org'
+    ];
+
+    return $from;
+  }
+
+  /*
    *
    */
   private function composeDigestBatch() {
-
-    // tags
-    $tags = $this->getDigestMessageTags();
 
     // subject line
     $subject = $this->getDigestMessageSubject();
@@ -181,16 +280,29 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     // from_name
     $from = $this->getDigestMessageFrom();
 
+    // to
+    $to = $this->getTo();
+
+    // global merge vars
+    $globalMergeVars = $this->getGlobalMergeVars();
+
+    // User merge vars
+    $userMergeVars = $this->getUserMergeVars();
+
+    // tags
+    $tags = $this->getDigestMessageTags();
+
     $composedDigestSubmission = array(
       'subject' => $subjects[$subjectCount],
-      'from_email' => 'noreply@dosomething.org',
-      'from_name' => 'Ben, DoSomething.org',
+      'from_email' => $from['email'],
+      'from_name' => $from['name'],
       'to' => $to,
-      'global_merge_vars' => $this->getGlobalMergeVars(),
-      'merge_vars' => $this->getUserMergeVars,
+      'global_merge_vars' => $globalMergeVars,
+      'merge_vars' => $userMergeVars,
       'tags' => $tags,
     );
 
+    return $composedDigestSubmission ;
   }
 
   /**
