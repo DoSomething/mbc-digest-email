@@ -33,7 +33,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    *
    */
-  private $messageMarkup;
+  private $campaigns = [];
 
   /**
    *
@@ -51,7 +51,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Based on user origin.
 
     // Create new Message object for user.
-    $this->mbcDEMandrillMessanger = new MBC_DigestEmail_MandrillMessenger($user);
+    $this->mbcDEMessanger = new MBC_DigestEmail_MandrillMessenger();
   }
 
   /**
@@ -82,7 +82,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     else {
 
       // @todo: Support different services based on interface base class
-      $status = $this->mbcDEMandrillMessanger->sendDigestBatch();
+      $status = $this->mbcDEMessanger->sendDigestBatch();
       $this->logStatus();
 
       unset($this->users);
@@ -121,13 +121,11 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     // List of campaign ids
     foreach($userProperty['campaigns'] as $campaign) {
-      if (isset($this->campaigns[$campaign['nid']])) {
-        $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
-      }
-      else {
+      if (!(isset($this->campaigns[$campaign['nid']]))) {
         $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign->nid);
+        $this->campaigns[$campaign->nid] = $mbcDECampaign;
       }
-      $mbcDEUser->addCampaign($mbcDECampaign);
+      $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
     }
 
     // Set message ID for ack_back
@@ -166,7 +164,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Get last user to now process
     $user = array_pop($this->users);
 
-    $this->mbcDEMandrillMessanger->addUser($user);
+    $this->mbcDEMessanger->addUser($user);
 
   }
 
