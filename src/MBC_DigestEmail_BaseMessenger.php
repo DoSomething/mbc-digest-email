@@ -15,16 +15,18 @@ abstract class MBC_DigestEmail_BaseMessenger {
   /*
    *
    */
-  protected $markup;
-  
-  /**
+  protected $to = [];
+
+  /*
    *
    */
-  public function __construct($targetTemplate) {
-
-    $this->markup = $this->getTemplate($targetTemplate);
-  }
+  abstract function addUser();
   
+  /*
+   *
+   */
+  abstract function sendDigestBatch();
+
   /**
    *
    */
@@ -32,27 +34,12 @@ abstract class MBC_DigestEmail_BaseMessenger {
 
     $targetFile = __DIR__ . '/../templates/' . $templateFile;
     try {
-      $messageMarkup = file_get_contents($targetFile);
+      $markup = file_get_contents($targetFile);
     }
     catch(Exception $e) {
-      die('MBC_DigestEmail_BaseContent->getTemplate(): Failed to load template: ' . $templateFile);
+      die('MBC_DigestEmail_BaseMessenger->getTemplate(): Failed to load template: ' . $templateFile);
     }
 
-    return $messageMarkup;
+    return $markup;
   }
-  
-  /**
-   *
-   */
-  public function getMarkup() {
-    return $this->markup;
-  }
-  
-  /**
-   *
-   */
-  protected function getMerge() {
-    
-  }
-
 }
