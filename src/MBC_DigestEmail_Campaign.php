@@ -8,6 +8,7 @@ namespace DoSomething\MBC_DigestEmail;
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
+use \Exception;
 
 /**
  * MBC_DigestEmail_Campaign class - 
@@ -148,9 +149,6 @@ class MBC_DigestEmail_Campaign {
   private function add($nid) {
 
     $campaignSettings = $this->gatherSettings($nid);
-    if ($campaignSettings === FALSE) {
-      return FALSE;
-    }
 
     $this->drupal_nid = $campaignSettings->nid;
     $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '#prove';
@@ -187,7 +185,7 @@ class MBC_DigestEmail_Campaign {
     }
     // DO IT: During Tip Copy - step_pre[0]->copy - nice to have but not a show stopper
     if (isset($campaignSettings->step_pre[0]->copy)) {
-      $this->during_tip_header = strip_tags($campaignSettings->step_pre[0]->copy);
+      $this->during_tip_copy = strip_tags($campaignSettings->step_pre[0]->copy);
     }
     else {
       echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
@@ -228,8 +226,14 @@ class MBC_DigestEmail_Campaign {
 
     // Exclude campaigns that don't have details in Drupal API or "Access
     // denied" due to campaign no longer published
-    if ($result[1] == 200) {
+    if ($result[1] == 200 && is_object($result[0])) {
       return $result[0];
+    }
+    elseif ($result[1] == 200 && is_array($result[0])) {
+      throw new Exception('Call to ' . $campaignAPIUrl . ' returned rejected response.' . $nid);
+    }
+    elseif ($result[1] == 403) {
+      throw new Exception('Call to ' . $campaignAPIUrl . ' returned rejected response: ' . $result[0][0] . '.' . $nid);
     }
     else {
       throw new Exception('Unable to call ' . $campaignAPIUrl . ' to get Campaign object: ' . $nid);
