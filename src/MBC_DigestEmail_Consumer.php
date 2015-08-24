@@ -47,7 +47,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    *
    */
-  public function __contruct() {
+  public function __construct() {
 
     // Future support of different Services other than Mandrill
     // could be toggled at this point with logic for user origin.
@@ -125,15 +125,24 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     // List of campaign ids
     foreach($userProperty['campaigns'] as $campaign) {
-      if (!(isset($this->campaigns[$campaign['nid']]))) {
-        $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
-        $this->campaigns[$campaign['nid']] = $mbcDECampaign;
+      if (isset($this->campaigns[$campaign['nid']])) {
+        $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
       }
-      $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
+      else {
+        try {
+          $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
+          $this->campaigns[$campaign['nid']] = $mbcDECampaign;
+          $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
+        }
+        catch (Exception $e) {
+          // @todo: Log/report missing campaign value.
+          echo 'MBC_DigestEmail_Consumer->setter(): Error creating  MBC_DigestEmail_Campaign object.' .$e->getMessage();
+        }
+      }
     }
 
     // Set message ID for ack_back
-    $mbcDEUser->setMessageID($message);
+    $mbcDEUser->setMessageID($userProperty['payload']);
 
     // Add user object to users property of current instance of Consumer class.
     $this->users[] = $mbcDEUser;
@@ -154,8 +163,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     }
 
     // Must have drupal_uid (for unsubscribe link)
-    if (!isset($this->message['drupal_nid'])) {
-      echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing nid (Drupal node ID).', PHP_EOL;
+    if (!isset($this->message['drupal_uid'])) {
+      echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing uid (Drupal node ID).', PHP_EOL;
       return FALSE;
     }
 
@@ -186,7 +195,6 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     $user = array_pop($this->users);
 
     $this->mbcDEMessanger->addUser($user);
-
   }
 
   /**
