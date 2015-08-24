@@ -5,6 +5,10 @@
  */
 namespace DoSomething\MBC_DigestEmail;
 
+use DoSomething\MB_Toolbox\MB_Configuration;
+use DoSomething\StatHat\Client as StatHat;
+use DoSomething\MB_Toolbox\MB_Toolbox;
+
 /**
  * MBC_DigestEmail_Campaign class - 
  */
@@ -39,11 +43,12 @@ class MBC_DigestEmail_Campaign {
    private $title;
 
   /**
+   * Needs public scope to allow making reference to campaign nid when assigning campaigns
+   * to user objects.
    *
-   *
-   * @var
+   * @var integer
    */
-   private $drupal_nid;
+   public $drupal_nid;
 
   /**
    *
@@ -116,15 +121,18 @@ class MBC_DigestEmail_Campaign {
    private $markup;
 
   /**
+   * __construct(): Trigger populating values in Campaign object.
    *
+   * @param integer $nid
+   *   nid (Drupal node ID) of the campaign content item.
    */
   function __construct($nid) {
-
-    $this->add($nid);
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
+
+    $this->add($nid);
   }
 
   /**
@@ -134,24 +142,25 @@ class MBC_DigestEmail_Campaign {
    */
   private function add($nid) {
 
-    $settings = $this->gatherSettings($nid);
+    $campaignSettings = $this->gatherSettings($nid);
     if ($campaignSettings == FALSE) {
       return FALSE;
     }
 
-    $this->title = $setting->title;
-    $this->drupal_nid = $setting->nid;
-    $this->is_staff_pick = $setting->is_staff_pick;
-    $this->url = 'http://www.dosomething.org/node/' . $campaign->nid . '#prove';
-    $this->image_campaign_cover = $setting->image_cover->src;
-    $this->call_to_action = $setting->call_to_action;
-    $this->fact_problem = $setting->fact_problem->fact;
-    $this->latest_news = $setting->latest_news_copy;
-    $this->fact_solution = $setting->fact_solution->fact;
-    $this->during_tip_header = $setting->step_pre[0]->header;
-    $this->during_tip = strip_tags($campaign->step_pre[0]->copy);
+    $this->title = $campaignSettings->title;
+    $this->drupal_nid = $campaignSettings->nid;
+    $this->is_staff_pick = $campaignSettings->is_staff_pick;
+    $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '#prove';
+    $this->image_campaign_cover = $campaignSettings->image_cover->src;
+    $this->call_to_action = $campaignSettings->call_to_action;
+    $this->fact_problem = $campaignSettings->fact_problem->fact;
+    $this->latest_news = $campaignSettings->latest_news_copy;
+    $this->during_tip_header = $campaignSettings->step_pre[0]->header;
+    $this->during_tip = strip_tags($campaignSettings->step_pre[0]->copy);
 
-    $this->generateMarkup();
+    if (isset($campaignSettings->fact_solution->fact)) {
+      $this->fact_solution = $campaignSettings->fact_solution->fact;
+    }
   }
 
   /**
@@ -168,7 +177,7 @@ class MBC_DigestEmail_Campaign {
 
     $dsDrupalAPIConfig = $this->mbConfig->getProperty('ds_drupal_api_config');
     $curlUrl = $dsDrupalAPIConfig['host'];
-    $curlUrl = $dsDrupalAPIConfig['port'];
+    $port = isset($dsDrupalAPIConfig['port']) ? $dsDrupalAPIConfig['port'] : NULL;
     if ($port != 0 && is_numeric($port)) {
       $curlUrl .= ':' . (int) $port;
     }
@@ -184,18 +193,5 @@ class MBC_DigestEmail_Campaign {
     else {
       return FALSE;
     }
-
-  }
-
-  /**
-   *
-   */
-  private function generateMarkup() {
-
-    // gater template
-    // marge object settings in template merge_var markers
-
-    $this->markup = '';
-
   }
 }
