@@ -5,6 +5,10 @@
  */
 namespace DoSomething\MBC_DigestEmail;
 
+use DoSomething\MB_Toolbox\MB_Configuration;
+use DoSomething\StatHat\Client as StatHat;
+use DoSomething\MB_Toolbox\MB_Toolbox;
+
 /**
  * MBC_DigestEmail_User class - 
  */
@@ -79,8 +83,6 @@ class MBC_DigestEmail_User
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
-
-    return TRUE;
   }
 
   /**
@@ -134,14 +136,14 @@ class MBC_DigestEmail_User
   }
 
   /**
-   * addCampaign: Add a campaign object to a list of campaign objects the user is active in.
+   * addCampaign: Add a campaign nid to a list of campaign nids the user is active in.
    * If the campaign is already on the list the object will be updated.
    *
    * @parm object campaign
    */
-  public function addCampaign($campaign) {
+  public function addCampaign(MBC_DigestEmail_Campaign $campaign) {
 
-    $this->campaigns[$campaign->nid] = $campaign;
+    $this->campaigns[$campaign->drupal_nid] = $campaign;
   }
 
   /**
