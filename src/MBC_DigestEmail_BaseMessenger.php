@@ -30,7 +30,7 @@ abstract class MBC_DigestEmail_BaseMessenger {
   /**
    *
    */
-  private function getTemplate($templateFile) {
+  protected function getTemplate($templateFile) {
 
     $targetFile = __DIR__ . '/../templates/' . $templateFile;
     try {
