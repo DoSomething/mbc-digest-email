@@ -54,7 +54,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   /*
    *
    */
-  public function __construct($campaigns) {
+  public function __construct() {
 
     // Application configuration
     $this->mbConfig = MB_Configuration::getInstance();
@@ -62,10 +62,9 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
 
     // Resources for building digest batch
-    $this->campaigns = $campaigns;
     $this->userIndex = 0;
-    $this->campaignTempate = parent::gatherTemplate('campaign-markup.inc');
-    $this->campaignTempateDivider = parent::gatherTemplate('campaign-divider-markup.inc');
+    $this->campaignTempate = parent::getTemplate('campaign-markup.inc');
+    $this->campaignTempateDivider = parent::getTemplate('campaign-divider-markup.inc');
     $this->mandrill = new Mandrill();
     $this->memberCount = $this->mbToolbox->getDSMemberCount();
     $this->globalMergeVars = setGlobalMergeVars();
@@ -77,7 +76,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    *
    * @param object $user
    */
-  private function addUser($user) {
+  public function addUser($user) {
 
     $this->processUser($user);
 
@@ -101,6 +100,13 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
         $user->campaigns[$nid]->markup = $this->generateCampaignMarkup($nid);
       }
     }
+  }
+
+  /*
+   *
+   */
+  public function addCampaigns($campaigns) {
+    $this->campaigns = $campaigns;
   }
 
   /*
