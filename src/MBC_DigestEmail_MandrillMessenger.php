@@ -77,9 +77,6 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
     $this->processUser($user);
 
-    $this->addToTo($user);
-    $this->buildUserMergeVars($user);
-
     // Move constructed user object into list of users to send batch
     // message to.
     $this->users[] = $this->user;
@@ -91,8 +88,15 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private function processUser($user) {
 
-    $this->processUserCampaigns($user);
-    $this->generateCampaignMarkup($user);
+    // Apply digest campaign rules to user campaign signups
+    $user->campaigns = $this->processUserCampaigns($user);
+
+    // Ensure user campaigns have markup to go into their digest message
+    foreach($user->campaigns as $nid => $campaign) {
+      if (!(isset($campaign->markup))) {
+        $user->campaigns[$nid]->markup = $this->generateCampaignMarkup($nid);
+      }
+    }
   }
 
   /*
@@ -156,6 +160,28 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
+   *
+   */
+  private function getUsersDigestSettings() {
+
+    foreach($this->users as $user) {
+      $userDigestSettings[] = [
+        'to' => $this->setTo($user),
+        'merger_vars' => $this->getUserMergeVars($user),
+      ];
+    }
+
+    return $userDigestSettings;
+  }
+
+  /**
+   *
+   */
+  private function getUserMergeVars() {
+
+  }
+
+  /**
    * Construct $to array based on Mandrill send-template API specification.
    *
    * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
@@ -176,19 +202,20 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    * @return array $to
    *   $to in Mandrill API structure.
    */
-  private function addToTo($user) {
+  private function setTo($user) {
 
-    $this->to[] = [
+    $to = [
       'email' => $user['email'],
       'name' => $user['fname'],
       'to' => 'to',
     ];
+    return $to;
   }
 
   /*
    *
    */
-  private function buildMergeVars($user) {
+  private function buildMergeUserVars($user) {
 
     $user->merge_vars['FNAME'] = ucfirst($user->first_name);
     $user->merge_vars['UNSUBSCRIBE_LINK'] = '';
@@ -280,14 +307,16 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     // from_name
     $from = $this->getDigestMessageFrom();
 
+    // Gather user settings in single request to ensure "to" and "marge_vars" are in sync
+    $usersDigestSettings = $this->getUsersDigestSettings();
     // to
-    $to = $this->getTo();
+    $to = $usersDigestSettings['to'];
 
     // global merge vars
     $globalMergeVars = $this->getGlobalMergeVars();
 
     // User merge vars
-    $userMergeVars = $this->getUserMergeVars();
+    $userMergeVars = $usersDigestSettings['merge_vars'];
 
     // tags
     $tags = $this->getDigestMessageTags();
