@@ -9,12 +9,14 @@ namespace DoSomething\MBC_DigestEmail;
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
-use Mandrill\Mandrill;
 
 /**
  * MBC_DigestEmail_MandrillMessenger class - 
  */
 class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
+
+  // The maximum number of campaigns to include in a users digest message.
+  const MAX_CAMPAIGNS = 5;
 
   /*
    *
@@ -65,9 +67,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->userIndex = 0;
     $this->campaignTempate = parent::getTemplate('campaign-markup.inc');
     $this->campaignTempateDivider = parent::getTemplate('campaign-divider-markup.inc');
-    $this->mandrill = new Mandrill();
-    $this->memberCount = $this->mbToolbox->getDSMemberCount();
-    $this->globalMergeVars = setGlobalMergeVars();
+    $this->mandrill = new \Mandrill();
+    $this->getGlobalMergeVars();
   }
 
   /**
@@ -89,7 +90,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   /*
    *
    */
-  private function processUser($user) {
+  protected function processUser($user) {
 
     // Apply digest campaign rules to user campaign signups
     $user->campaigns = $this->processUserCampaigns($user);
@@ -110,32 +111,79 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /*
-   *
+   * processUserCampaigns(): Order the user campaigns by:
+   *  - is staff pick
+   *    - ordered by user campaign signup
+   *  - non staff pick
+   *    - ordered by user campaign signup
+   *  - limit to maximum 5 campaigns
    */
   private function processUserCampaigns($user) {
 
-  }
+    $staffPicks = array();
+    $nonStaffPicks = array();
 
-  /**
-   * generateCampaignMarkup(): Build campaign and divider markup
-   * CAMPAIGNS user merge var.
-   *
-   * @param object $user
-   *   Details of the user to generate the digest message for.
-   */
-  private function generateCampaignMarkup($user) {
-
-    foreach($user->campaigns as $campaign) {
-      str_replace($this->campaignTempate, '');
+    foreach ($user->campaigns as $campaignCount => $campaign) {
+      if (isset($campaign->is_staff_pick) && $campaignDetail->is_staff_pick == TRUE) {
+        $staffPicks[] = $campaign;
+      }
+      else {
+        $nonStaffPicks[] = $targetUserCampaign;
+      }
     }
+
+    // Sort staff picks by date
+    usort($staffPicks, function($a, $b) {
+      return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
+    });
+
+    // Sort non-staff picks by date
+    usort($nonStaffPicks, function($a, $b) {
+      return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
+    });
+
+    // Merge all campaigns, Staff Picks first, Non last.
+    $campaigns = $staffPicks + $nonStaffPicks;
+
+    // Limit the number of campaigns in message to MAX_CAMPAIGNS
+    if (count($campaigns) > self::MAX_CAMPAIGNS) {
+        $user->campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS);
+    }
+
+    return $user;
+  }
+
+  /**
+   * generateCampaignMarkup(): Build campaign markup for CAMPAIGNS user merge var.
+   */
+  private function generateCampaignMarkup($nid) {
+
+    $campaignMarkup = $this->campaignTempate;
+
+    $campaign = $user->campaigns[$nid];
+    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign['image_campaign_cover'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign['title'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign['url'], $campaignMarkup);
+    $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
+
+    if (isset($campaign['latest_news'])) {
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team:', $campaignMarkup);
+      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
+    }
+    else {
+      $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['during_tip_header'], $campaignMarkup);
+      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip_copy'], $campaignMarkup);
+    }
+
+    return $campaignMarkup;
   }
 
   /**
    *
    */
-  private function setGlobalMergeVars() {
+  private function getGlobalMergeVars() {
 
-    $memberCount = $this->memberCount;
+    $memberCount = $this->mbToolbox->getDSMemberCount();
     $currentYear = date('Y');
 
     $this->globalMergeVars = [
@@ -157,7 +205,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    *   digest batch.
    *
    */
-  private function getGlobalMergeVars() {
+  private function setGlobalMergeVars() {
 
     foreach($this->globalMergeVars as $name => $content) {
       $globalMergeVars[] = [
