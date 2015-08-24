@@ -60,7 +60,7 @@ class MBC_DigestEmail_User
    *
    * @var array
    */
-  protected $campaigns = [];
+  public $campaigns = [];
 
   /**
    * __construct: When a new instance of the class is created it must include an email address. An
