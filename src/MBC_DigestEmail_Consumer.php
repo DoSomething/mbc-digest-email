@@ -25,6 +25,10 @@ use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
+  // The number of messages to include in each batch digest submission to the service
+  // that is used to send the messages.
+  const BATCH_SIZE = 5;
+
   /**
    *
    */
@@ -38,7 +42,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    *
    */
-  private $mbcDEMandrillMessanger;
+  private $mbcDEMessanger;
 
   /**
    *
@@ -61,15 +65,15 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    * @param array $message
    *  The payload of the unserialized message being processed.
    */
-  protected function consumeDigestUserQueue($message) {
+  public function consumeDigestUserQueue($message) {
 
-    parent::consumeQueue();
+    parent::consumeQueue($message);
 
     if (count($this->users) <= self::BATCH_SIZE) {
 
       if ($this->canProcess()) {
 
-        $this->setter($message);
+        $this->setter($this->message);
 
         // Build out user object and gather / trigger building campaign objects
         // based on user campaign activity
@@ -93,13 +97,13 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    * Sets values for processing based on contents of message from consumed queue.
    *
-   * @param array $message
-   *  The payload of the unserialized message being processed.
+   * @param array $userProperty
+   *  The indexed array of user properties based on the message sent to the digestUserQueue.
    */
-  protected function setter($message) {
+  protected function setter($userProperty) {
 
     // Create new user object
-    $mbcDEUser = new MBC_DigestEmail_User($message['email']);
+    $mbcDEUser = new MBC_DigestEmail_User($userProperty['email']);
 
     // First name
     if (!(isset($userProperty['first_name']))) {
@@ -122,8 +126,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // List of campaign ids
     foreach($userProperty['campaigns'] as $campaign) {
       if (!(isset($this->campaigns[$campaign['nid']]))) {
-        $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign->nid);
-        $this->campaigns[$campaign->nid] = $mbcDECampaign;
+        $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
+        $this->campaigns[$campaign['nid']] = $mbcDECampaign;
       }
       $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
     }
@@ -150,8 +154,25 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     }
 
     // Must have drupal_uid (for unsubscribe link)
+    if (!isset($this->message['drupal_nid'])) {
+      echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing nid (Drupal node ID).', PHP_EOL;
+      return FALSE;
+    }
+
     // Confirm there's no reportbacks
+    if (!(isset($this->message['campaigns']))) {
+      foreach($this->message['campaigns'] as $campaign) {
+        if (isset($campaign['reportback'])) {
+          return FALSE;
+        }
+      }
+    }
+
     // Confirm there's campaign signups to process, must be at least one
+    if (!(isset($this->message['campaigns'])) && count($this->message['campaigns'] > 0)) {
+      echo 'MBC_DigestEmail_Consumer->canProcess(): Missing active campaign signups to define digest message.', PHP_EOL;
+      return FALSE;
+    }
 
     return TRUE;
   }
