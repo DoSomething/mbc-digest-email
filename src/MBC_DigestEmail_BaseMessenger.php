@@ -20,7 +20,7 @@ abstract class MBC_DigestEmail_BaseMessenger {
   /*
    *
    */
-  abstract function addUser();
+  abstract function addUser($user);
   
   /*
    *
