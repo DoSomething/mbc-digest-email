@@ -15,6 +15,7 @@ use DoSomething\StatHat\Client as StatHat;
 use RabbitMq\ManagementApi\Client;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
+use \Exception;
 
 /**
  * MBC_DigestEmail_Consumer class - functionality related to the Message Broker
@@ -73,14 +74,14 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
       if ($this->canProcess()) {
 
-        $this->setter($this->message);
+        $setterOK = $this->setter($this->message);
 
         // Build out user object and gather / trigger building campaign objects
         // based on user campaign activity
-        $this->process();
-
+        if ($setterOK) {
+          $this->process();
+        }
       }
-
     }
     // Send batch of user digest messages
     else {
@@ -136,7 +137,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
         }
         catch (Exception $e) {
           // @todo: Log/report missing campaign value.
-          echo 'MBC_DigestEmail_Consumer->setter(): Error creating  MBC_DigestEmail_Campaign object.' .$e->getMessage();
+          echo 'MBC_DigestEmail_Consumer->setter(): Error creating  MBC_DigestEmail_Campaign object.' . $e->getMessage();
         }
       }
     }
@@ -144,8 +145,17 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Set message ID for ack_back
     $mbcDEUser->setMessageID($userProperty['payload']);
 
-    // Add user object to users property of current instance of Consumer class.
-    $this->users[] = $mbcDEUser;
+    // Add user object to users property of current instance of Consumer class only in the case where the user
+    // object has at least on campaign entry. It's possible to get to this point with no campaign entries due
+    // to encountering Exceptions.
+    if (count($mbcDEUser->campaigns) > 0) {
+      $this->users[] = $mbcDEUser;
+      return $mbcDEUser;
+    }
+    else {
+      return FALSE;
+    }
+
   }
 
   /**
