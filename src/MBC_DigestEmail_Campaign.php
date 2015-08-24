@@ -137,6 +137,7 @@ class MBC_DigestEmail_Campaign {
     $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
 
     $this->add($nid);
+    // $this->generateMarkup($nid);
   }
 
   /**
@@ -147,23 +148,59 @@ class MBC_DigestEmail_Campaign {
   private function add($nid) {
 
     $campaignSettings = $this->gatherSettings($nid);
-    if ($campaignSettings == FALSE) {
+    if ($campaignSettings === FALSE) {
       return FALSE;
     }
 
-    $this->title = $campaignSettings->title;
     $this->drupal_nid = $campaignSettings->nid;
-    $this->is_staff_pick = $campaignSettings->is_staff_pick;
     $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '#prove';
-    $this->image_campaign_cover = $campaignSettings->image_cover->src;
-    $this->call_to_action = $campaignSettings->call_to_action;
-    $this->fact_problem = $campaignSettings->fact_problem->fact;
-    $this->latest_news = $campaignSettings->latest_news_copy;
-    $this->during_tip_header = $campaignSettings->step_pre[0]->header;
-    $this->during_tip = strip_tags($campaignSettings->step_pre[0]->copy);
 
-    if (isset($campaignSettings->fact_solution->fact)) {
-      $this->fact_solution = $campaignSettings->fact_solution->fact;
+    // Title - required
+    if (isset($campaignSettings->title)) {
+      $this->title = $campaignSettings->title;
+    }
+    else {
+      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' title not set.', PHP_EOL;
+      throw new Exception('Unable to create Campaign object : ' . $nid . ' title not set.');
+    }
+    // image_cover->src - required
+    if (isset($campaignSettings->image_cover->src)) {
+      $this->image_campaign_cover = $campaignSettings->image_cover->src;
+    }
+    else {
+      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') image_cover->src not set.', PHP_EOL;
+      throw new Exception('Unable to create Campaign object : ' . $nid . ' (' . $this->title . ') image_cover->src not set.');
+    }
+    // call_to_action - nice to have but not a show stopper
+    if (isset($campaignSettings->call_to_action)) {
+      $this->call_to_action = $campaignSettings->call_to_action;
+    }
+    else {
+      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') call_to_action not set.', PHP_EOL;
+    }
+    // DO IT: During Tip Header - step_pre[0]->header - nice to have but not a show stopper
+    if (isset($campaignSettings->step_pre[0]->header)) {
+      $this->during_tip_header = $campaignSettings->step_pre[0]->header;
+    }
+    else {
+      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Header, step_pre[0]->header not set.', PHP_EOL;
+    }
+    // DO IT: During Tip Copy - step_pre[0]->copy - nice to have but not a show stopper
+    if (isset($campaignSettings->step_pre[0]->copy)) {
+      $this->during_tip_header = strip_tags($campaignSettings->step_pre[0]->copy);
+    }
+    else {
+      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
+    }
+
+    // Optional
+    // is_staff_pick
+    if (isset($campaignSettings->is_staff_pick)) {
+      $this->is_staff_pick = $campaignSettings->is_staff_pick;
+    }
+    // latest_news_copy - replaces Tip copy if set.
+    if (isset($campaignSettings->latest_news_copy)) {
+      $this->latest_news = strip_tags($campaignSettings->latest_news_copy);
     }
   }
 
@@ -191,11 +228,11 @@ class MBC_DigestEmail_Campaign {
 
     // Exclude campaigns that don't have details in Drupal API or "Access
     // denied" due to campaign no longer published
-    if ($result != NULL && (is_array($result) && $result[0] !== FALSE)) {
+    if ($result[1] == 200) {
       return $result[0];
     }
     else {
-      return FALSE;
+      throw new Exception('Unable to call ' . $campaignAPIUrl . ' to get Campaign object: ' . $nid);
     }
   }
 }
