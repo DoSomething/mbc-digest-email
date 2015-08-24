@@ -51,65 +51,69 @@ class MBC_DigestEmail_Campaign {
    public $drupal_nid;
 
   /**
+   * A flag to determine if the campaign has "staff pick" status. Used for sorting of
+   * campaigns in user digest messages.
    *
-   *
-   * @var
+   * @var boolean
    */
    private $is_staff_pick;
 
   /**
    *
    *
-   * @var
+   * @var string
    */
    private $url;
 
   /**
    *
    *
-   * @var
+   * @var string
    */
    private $image_campaign_cover;
 
   /**
+   * Campaign text displayed in summary listings to encourage users to take up the
+   * "call to action".
    *
-   *
-   * @var
+   * @var string
    */
    private $call_to_action;
 
   /**
+   * The problem that will be addressed by doing the campaign. Used in descriptive text in
+   * digest message campaign listings.
    *
-   *
-   * @var
+   * @var string
    */
    private $fact_problem;
 
   /**
    *
    *
-   * @var
+   * @var string
+   */
+   private  $fact_solution;
+
+  /**
+   * Special message from campaign manager about the campaign. Presence of this messages overrides
+   * all other campaign descriptive text.
+   *
+   * @var string
    */
    private $latest_news;
 
   /**
    *
    *
-   * @var
-   */
-   private  $fact_solution;
-
-  /**
-   *
-   *
-   * @var
+   * @var string
    */
    private $during_tip_header;
 
   /**
    *
    *
-   * @var
+   * @var string
    */
    private $during_tip;
 
@@ -121,7 +125,7 @@ class MBC_DigestEmail_Campaign {
    private $markup;
 
   /**
-   * __construct(): Trigger populating values in Campaign object.
+   * __construct(): Trigger populating values in Campaign object when object is created.
    *
    * @param integer $nid
    *   nid (Drupal node ID) of the campaign content item.
