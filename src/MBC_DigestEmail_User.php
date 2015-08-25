@@ -139,11 +139,15 @@ class MBC_DigestEmail_User
    * addCampaign: Add a campaign nid to a list of campaign nids the user is active in.
    * If the campaign is already on the list the object will be updated.
    *
-   * @parm object campaign
+   * @parm integer nid
+   *   Drupal nid (node ID) of the campaign
+   * @param array $activity
+   *   SIgnup or Reportback with timestamp of when the activity took place.
    */
-  public function addCampaign(MBC_DigestEmail_Campaign $campaign) {
-
-    $this->campaigns[$campaign->drupal_nid] = $campaign;
+  public function addCampaign($nid, $activityTimestamp) {
+    if (!(isset($this->campaigns[$nid]))) {
+      $this->campaigns[$nid] = $activityTimestamp;
+    }
   }
 
   /**
@@ -157,11 +161,11 @@ class MBC_DigestEmail_User
       // More meaningful functionality when links are stored and retrieved in ds-digest-api as
       // persistant storage between digest runs. Long term storage will result in expired links over time.
       $expiryTimestamp = time() - self::SUBSCRIPTION_LINK_STD;
-      if (isset($this->subscriptions['created']) && $this->subscriptions['created'] < date("Y-m-d H:i:s", $expiryTimestamp)) {
+      if (isset($this->subscriptions->created) && $this->subscriptions->created < date("Y-m-d H:i:s", $expiryTimestamp)) {
         return $this->buildSubscriptionsLink();
       }
 
-      return $this->subscriptions['url'];
+      return $this->subscriptions->url;
     }
 
     return $this->buildSubscriptionsLink();
@@ -172,10 +176,53 @@ class MBC_DigestEmail_User
    */
   private function buildSubscriptionsLink() {
 
-    $this->subscriptions['url'] = $this->MB_Toolbox->getUnsubscribeLink($this->email, $this->drupal_uid);
-    $this->subscriptions['created'] = date('c');
+    $this->subscriptions->url = $this->MB_Toolbox->getUnsubscribeLink($this->email, $this->drupal_uid);
+    $this->subscriptions->created = date('c');
 
     return $this->subscriptions['url'];
+  }
+
+  /*
+   * processUserCampaigns(): Order the user campaigns by:
+   *  - is staff pick
+   *    - ordered by user campaign signup
+   *  - non staff pick
+   *    - ordered by user campaign signup
+   *  - limit to maximum 5 campaigns
+   */
+  private function processUserCampaigns() {
+
+    $staffPicks = array();
+    $nonStaffPicks = array();
+
+    foreach ($this->campaigns as $campaignNID => $campaign) {
+      if (isset($campaign['settings']->is_staff_pick) && $campaignDetail['settings']->is_staff_pick == TRUE) {
+        $staffPicks[] = $campaign;
+      }
+      else {
+        $nonStaffPicks[] = $campaign;
+      }
+    }
+
+    // Sort staff picks by date
+    usort($staffPicks, function($a, $b) {
+      return $a['signup'] - $b['signup'] ? 0 : ( $a['signup'] > $b['signup']) ? 1 : -1;
+    });
+
+    // Sort non-staff picks by date
+    usort($nonStaffPicks, function($a, $b) {
+      return $a['signup'] - $b['signup'] ? 0 : ( $a['signup'] > $b['signup']) ? 1 : -1;
+    });
+
+    // Merge all campaigns, Staff Picks first, Non last.
+    $campaigns = $staffPicks + $nonStaffPicks;
+
+    // Limit the number of campaigns in message to MAX_CAMPAIGNS
+    if (count($campaigns) > self::MAX_CAMPAIGNS) {
+        $campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS);
+    }
+
+    $this->campaigns = $campaigns;
   }
 
 }
