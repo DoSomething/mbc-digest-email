@@ -26,7 +26,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   /**
    *
    */
-  private $campaigns;
+  private $campaigns = [];
 
   /**
    *
@@ -73,109 +73,111 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
   /**
    * addUser(): Coordinate the the construction of a user object resulting
-   * in an addition to the users list for the batch message to be sent to.
+   * in an addition to the users list to base future batch messaging.
    *
    * @param object $user
    */
   public function addUser($user) {
 
-    $this->processUser($user);
-
-    // Move constructed user object into list of users to send batch
-    // message to.
-    $this->users[] = $this->user;
+    // Add user object into list of users to send batch message to.
+    $this->users[$user->email] = $user;
     $this->userIndex++;
-  }
 
-  /*
-   *
-   */
-  protected function processUser($user) {
-
-    // Apply digest campaign rules to user campaign signups
-    $user->campaigns = $this->processUserCampaigns($user);
-
-    // Ensure user campaigns have markup to go into their digest message
-    foreach($user->campaigns as $nid => $campaign) {
-      if (!(isset($campaign->markup))) {
-        $user->campaigns[$nid]->markup = $this->generateCampaignMarkup($nid);
-      }
-    }
-  }
-
-  /*
-   *
-   */
-  public function addCampaigns($campaigns) {
-    $this->campaigns = $campaigns;
-  }
-
-  /*
-   * processUserCampaigns(): Order the user campaigns by:
-   *  - is staff pick
-   *    - ordered by user campaign signup
-   *  - non staff pick
-   *    - ordered by user campaign signup
-   *  - limit to maximum 5 campaigns
-   */
-  private function processUserCampaigns($user) {
-
-    $staffPicks = array();
-    $nonStaffPicks = array();
-
-    foreach ($user->campaigns as $campaignCount => $campaign) {
-      if (isset($campaign->is_staff_pick) && $campaignDetail->is_staff_pick == TRUE) {
-        $staffPicks[] = $campaign;
-      }
-      else {
-        $nonStaffPicks[] = $targetUserCampaign;
-      }
-    }
-
-    // Sort staff picks by date
-    usort($staffPicks, function($a, $b) {
-      return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
-    });
-
-    // Sort non-staff picks by date
-    usort($nonStaffPicks, function($a, $b) {
-      return $a->signup - $b->signup ? 0 : ( $a->signup > $b->signup) ? 1 : -1;
-    });
-
-    // Merge all campaigns, Staff Picks first, Non last.
-    $campaigns = $staffPicks + $nonStaffPicks;
-
-    // Limit the number of campaigns in message to MAX_CAMPAIGNS
-    if (count($campaigns) > self::MAX_CAMPAIGNS) {
-        $user->campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS);
-    }
-
-    return $user;
+    $this->generateUserMergeVars($user->email);
   }
 
   /**
-   * generateCampaignMarkup(): Build campaign markup for CAMPAIGNS user merge var.
+   * addCampaign(): Add campaign object to class campaigns property indexed by the
+   * campaign Drupal nid (node ID).
+   *
+   * @param MBC_DigestEmail_Campaign (object) $campaign
+   *   Details of a campaign based on details gathered from the Drupal site based on a Drupal
+   *   nid (node ID).
    */
-  private function generateCampaignMarkup($nid) {
+  public function addCampaign( MBC_DigestEmail_Campaign $campaign) {
 
-    $campaignMarkup = $this->campaignTempate;
-
-    $campaign = $user->campaigns[$nid];
-    $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign['image_campaign_cover'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign['title'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign['url'], $campaignMarkup);
-    $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign['call_to_action'], $campaignMarkup);
-
-    if (isset($campaign['latest_news'])) {
-      $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team:', $campaignMarkup);
-      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['latest_news'], $campaignMarkup);
+    if (!(isset($this->campaigns[$campaign->drupal_nid]))) {
+        $this->campaigns[$campaign->drupal_nid] = $campaign;
+        $this->generateCampaignMarkup($campaign);
     }
-    else {
-      $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign['during_tip_header'], $campaignMarkup);
-      $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign['during_tip_copy'], $campaignMarkup);
+  }
+
+  /**
+   * generateCampaignMarkup(): Build campaign markup for Campaign object. To be used to
+   * generate *|CAMPAIGNS|* user merge var.
+   *
+   * @param object $campaign
+   */
+  private function generateCampaignMarkup($campaign) {
+
+    // Check for existing markup
+    if (!(isset($this->campaigns[$campaign->drupal_nid]->markup))) {
+
+      $campaignMarkup = $this->campaignTempate;
+
+      $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign->image_campaign_cover, $campaignMarkup);
+      $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
+      $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
+      $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
+
+      if (isset($campaign->latest_news)) {
+        $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team:', $campaignMarkup);
+        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->latest_news, $campaignMarkup);
+      }
+      else {
+        $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign->during_tip_header, $campaignMarkup);
+        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->during_tip_copy, $campaignMarkup);
+      }
+
+      $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
+    }
+  }
+
+  /**
+   *
+   */
+  public function generateUserMergeVars($userEmail) {
+
+    $firstName = $this->users[$userEmail]->first_name;
+    $campaignsMarkup = $this->generateUserCampaignMarkup($userEmail);
+    $unsubscribeLinkMarkup = $this->users[$userEmail]->subscriptions->url;
+
+    $this->users[$userEmail]->merge_vars = [
+      'FNAME' =>  $firstName,
+      'CAMPAIGNS' => $campaignsMarkup,
+      'UNSUBSCRIBE_LINK' => $unsubscribeLinkMarkup,
+    ];
+  }
+
+  /**
+   * generateUserCampaignMarkup(): Generate markup for campaign listing based on specific user
+   * campaigns settings.
+   *
+   * @param string $userEmail
+   *   The email address of the target user. Used to access users class property which is
+   *   indexed by the users email string.
+   *
+   * @return string $markup
+   *   HTML string of the user campaigns. Used as body of digest email message for
+   *   specific user.
+   */
+  private function generateUserCampaignMarkup($userEmail) {
+
+    $markup = '';
+    $campaignCounter = 0;
+    $totalCampaigns = count($this->users[$userEmail]->campaigns);
+
+    foreach($this->users[$userEmail]->campaigns as $nid => $campaign) {
+        $campaignCounter++;
+        $markup .= $this->campaigns[$campaign->drupal_nid]->markup;
+
+        // Add divider markup if more campaings are to be added
+        if ($totalCampaigns - 1 > $campaignCounter) {
+          $markup .= $this->campaignTempateDivider;
+        }
     }
 
-    return $campaignMarkup;
+    return $markup;
   }
 
   /**
