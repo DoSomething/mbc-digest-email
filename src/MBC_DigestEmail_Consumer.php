@@ -43,6 +43,11 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    *
    */
+  private $mbcDEUser;
+
+  /**
+   *
+   */
   private $mbcDEMessanger;
 
   /**
@@ -104,41 +109,53 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   protected function setter($userProperty) {
 
     // Create new user object
-    $mbcDEUser = new MBC_DigestEmail_User($userProperty['email']);
+    $this->mbcDEUser = new MBC_DigestEmail_User($userProperty['email']);
 
     // First name
     if (!(isset($userProperty['first_name']))) {
       $userProperty['first_name'] = '';
     }
-    $mbcDEUser->setFirstName($userProperty['first_name']);
+    $this->mbcDEUser->setFirstName($userProperty['first_name']);
 
     // Language preference
     if (!(isset($userProperty['source']))) {
       $userProperty['source'] = 'US';
     }
-    $mbcDEUser->setLanguage($userProperty['source']);
+    $this->mbcDEUser->setLanguage($userProperty['source']);
 
     // Drupal UID
     if (!(isset($userProperty['drupal_uid']))) {
       $userProperty['drupal_uid'] = '';
     }
-    $mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
+    $this->mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
 
     // List of campaign ids
     foreach($userProperty['campaigns'] as $campaign) {
-      if (isset($this->campaigns[$campaign['nid']])) {
-        $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
-      }
-      else {
+
+      // Build campaign object if it does not already exist
+      if (!(isset($this->campaigns[$campaign['nid']]))) {
         try {
+          // Create Campaign object and add to Consumer property of all Campaigns to be processed
+          // in batch being sent to the Messenger object.
           $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
-          $this->campaigns[$campaign['nid']] = $mbcDECampaign;
-          $mbcDEUser->addCampaign($this->campaigns[$campaign['nid']]);
         }
         catch (Exception $e) {
           // @todo: Log/report missing campaign value.
           echo 'MBC_DigestEmail_Consumer->setter(): Error creating  MBC_DigestEmail_Campaign object.' . $e->getMessage();
+          $mbcDECampaign = [
+            'nid' => $campaign['nid'],
+            'creationError' => $e->getMessage(),
+          ];
         }
+      }
+
+      // Add campaign object to concerned properties and related objects.
+      $this->campaigns[$campaign['nid']] = $mbcDECampaign;
+      $this->mbcDEMessanger->addCampaign($mbcDECampaign);
+
+      // Exclude campaings that are not functional Campaign objects.
+      if (is_object($mbcDECampaign)) {
+        $this->mbcDEUser->addCampaign($campaign['nid'], $campaign['signup']);
       }
     }
 
@@ -197,25 +214,17 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   }
 
   /**
-   * Process message from consumed queue.
+   * Process message from consumed queue. process() involves apply methods to existing objects as
+   * a part of consuming a message in a queue.
    */
   protected function process() {
 
-    // Get last user to now process
-    $user = array_pop($this->users);
+    $this->mbcDEUser->processUserCampaigns();
+    $this->mbcDEUser->getSubsciptionsURL();
+    $this->mbcDEMessanger->addUser($this->mbcDEUser);
 
-    $this->mbcDEMessanger->addUser($user);
-  }
-
-  /**
-   *
-   */
-  private function getCommonMergeVars($user) {
-
-    $user->merge_vars['MEMBER_COUNT'] = '';
-    $user->merge_vars['CURRENT_YEAR'] = '';
-
-    return $user;
+    // Cleanup for processing of next message
+    unset($this->mbcDEUser);
   }
 
 }
