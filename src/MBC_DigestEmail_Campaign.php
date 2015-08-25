@@ -41,7 +41,7 @@ class MBC_DigestEmail_Campaign {
    *
    * @var
    */
-   private $title;
+   public $title;
 
   /**
    * Needs public scope to allow making reference to campaign nid when assigning campaigns
@@ -57,21 +57,21 @@ class MBC_DigestEmail_Campaign {
    *
    * @var boolean
    */
-   private $is_staff_pick;
+   public $is_staff_pick;
 
   /**
    *
    *
    * @var string
    */
-   private $url;
+   public $url;
 
   /**
    *
    *
    * @var string
    */
-   private $image_campaign_cover;
+   public $image_campaign_cover;
 
   /**
    * Campaign text displayed in summary listings to encourage users to take up the
@@ -79,7 +79,7 @@ class MBC_DigestEmail_Campaign {
    *
    * @var string
    */
-   private $call_to_action;
+   public $call_to_action;
 
   /**
    * The problem that will be addressed by doing the campaign. Used in descriptive text in
@@ -87,14 +87,14 @@ class MBC_DigestEmail_Campaign {
    *
    * @var string
    */
-   private $fact_problem;
+   public $fact_problem;
 
   /**
    *
    *
    * @var string
    */
-   private  $fact_solution;
+   public  $fact_solution;
 
   /**
    * Special message from campaign manager about the campaign. Presence of this messages overrides
@@ -102,28 +102,28 @@ class MBC_DigestEmail_Campaign {
    *
    * @var string
    */
-   private $latest_news;
+   public $latest_news;
 
   /**
    *
    *
    * @var string
    */
-   private $during_tip_header;
+   public $during_tip_header;
 
   /**
    *
    *
    * @var string
    */
-   private $during_tip;
+   public $during_tip;
 
   /**
    *
    *
    * @var
    */
-   private $markup;
+   public $markup;
 
   /**
    * __construct(): Trigger populating values in Campaign object when object is created.
@@ -131,7 +131,7 @@ class MBC_DigestEmail_Campaign {
    * @param integer $nid
    *   nid (Drupal node ID) of the campaign content item.
    */
-  function __construct($nid) {
+  public function __construct($nid) {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
