@@ -28,7 +28,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
   // The number of messages to include in each batch digest submission to the service
   // that is used to send the messages.
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = 2;
 
   /**
    *
@@ -75,7 +75,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     parent::consumeQueue($message);
 
-    if (count($this->users) <= self::BATCH_SIZE) {
+    if (count($this->users) < self::BATCH_SIZE) {
 
       if ($this->canProcess()) {
 
@@ -133,6 +133,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     foreach($userProperty['campaigns'] as $campaign) {
 
       // Build campaign object if it does not already exist
+      $mbcDECampaign = NULL;
       if (!(isset($this->campaigns[$campaign['nid']]))) {
         try {
           // Create Campaign object and add to Consumer property of all Campaigns to be processed
@@ -147,14 +148,13 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
             'creationError' => $e->getMessage(),
           ];
         }
+        // Add campaign object to concerned properties and related objects.
+        $this->campaigns[$campaign['nid']] = $mbcDECampaign;
       }
-
-      // Add campaign object to concerned properties and related objects.
-      $this->campaigns[$campaign['nid']] = $mbcDECampaign;
-      $this->mbcDEMessanger->addCampaign($mbcDECampaign);
 
       // Exclude campaings that are not functional Campaign objects.
       if (is_object($mbcDECampaign)) {
+        $this->mbcDEMessanger->addCampaign($mbcDECampaign);
         $this->mbcDEUser->addCampaign($campaign['nid'], $campaign['signup']);
       }
     }
