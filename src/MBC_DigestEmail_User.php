@@ -68,7 +68,7 @@ class MBC_DigestEmail_User
    *
    * @var object
    */
-  protected $subscription_link;
+  public $subscription_link;
 
   /**
    * The campaigns the user digest message will contain as active and needing report backs.
@@ -214,29 +214,39 @@ class MBC_DigestEmail_User
 
     foreach ($this->campaigns as $campaignNID => $campaign) {
       if (isset($campaign['settings']->is_staff_pick) && $campaignDetail['settings']->is_staff_pick == TRUE) {
-        $staffPicks[] = $campaign;
+        $staffPicks[$campaignNID] = $campaign;
       }
       else {
-        $nonStaffPicks[] = $campaign;
+        $nonStaffPicks[$campaignNID] = $campaign;
       }
     }
 
-    // Sort staff picks by date
-    usort($staffPicks, function($a, $b) {
-      return $a['signup'] - $b['signup'] ? 0 : ( $a['signup'] > $b['signup']) ? 1 : -1;
-    });
+    // Sort staff picks by timestamp
+    uasort($staffPicks,
+      function($a, $b) {
+        if ($a == $b) {
+          return 0;
+        }
+        return ($a < $b) ? 1 : -1;
+      }
+    );
 
-    // Sort non-staff picks by date
-    usort($nonStaffPicks, function($a, $b) {
-      return $a['signup'] - $b['signup'] ? 0 : ( $a['signup'] > $b['signup']) ? 1 : -1;
-    });
+    // Sort non-staff picks by timestamp
+    uasort($nonStaffPicks,
+      function($a, $b) {
+        if ($a == $b) {
+          return 0;
+        }
+        return ($a < $b) ? 1 : -1;
+      }
+    );
 
     // Merge all campaigns, Staff Picks first, Non last.
     $campaigns = $staffPicks + $nonStaffPicks;
 
     // Limit the number of campaigns in message to MAX_CAMPAIGNS
     if (count($campaigns) > self::MAX_CAMPAIGNS) {
-        $campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS);
+        $campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS, TRUE);
     }
 
     $this->campaigns = $campaigns;
