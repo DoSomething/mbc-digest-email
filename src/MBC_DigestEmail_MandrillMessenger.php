@@ -68,7 +68,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->campaignTempate = parent::getTemplate('campaign-markup.inc');
     $this->campaignTempateDivider = parent::getTemplate('campaign-divider-markup.inc');
     $this->mandrill = new \Mandrill();
-    $this->getGlobalMergeVars();
+    $this->setGlobalMergeVars();
   }
 
   /**
@@ -97,7 +97,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   public function addCampaign( MBC_DigestEmail_Campaign $campaign) {
 
     if (!(isset($this->campaigns[$campaign->drupal_nid]))) {
-        $this->campaigns[$campaign->drupal_nid] = $campaign;
+        $campaignNID = (string) $campaign->drupal_nid;
+        $this->campaigns[$campaignNID] = $campaign;
         $this->generateCampaignMarkup($campaign);
     }
   }
@@ -138,9 +139,9 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   public function generateUserMergeVars($userEmail) {
 
-    $firstName = $this->users[$userEmail]->first_name;
+    $firstName = $this->users[$userEmail]->firstName;
     $campaignsMarkup = $this->generateUserCampaignMarkup($userEmail);
-    $unsubscribeLinkMarkup = $this->users[$userEmail]->subscriptions->url;
+    $unsubscribeLinkMarkup = 'http://' . $this->users[$userEmail]->subscription_link->url;
 
     $this->users[$userEmail]->merge_vars = [
       'FNAME' =>  $firstName,
@@ -168,13 +169,13 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $totalCampaigns = count($this->users[$userEmail]->campaigns);
 
     foreach($this->users[$userEmail]->campaigns as $nid => $campaign) {
-        $campaignCounter++;
-        $markup .= $this->campaigns[$campaign->drupal_nid]->markup;
+      $markup .= $this->campaigns[$nid]->markup;
 
-        // Add divider markup if more campaings are to be added
-        if ($totalCampaigns - 1 > $campaignCounter) {
-          $markup .= $this->campaignTempateDivider;
-        }
+      // Add divider markup if more campaings are to be added
+      if ($totalCampaigns - 1 > $campaignCounter) {
+        $markup .= $this->campaignTempateDivider;
+      }
+      $campaignCounter++;
     }
 
     return $markup;
@@ -183,7 +184,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   /**
    *
    */
-  private function getGlobalMergeVars() {
+  private function setGlobalMergeVars() {
 
     $memberCount = $this->mbToolbox->getDSMemberCount();
     $currentYear = date('Y');
@@ -195,7 +196,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   * getGlobalMergeVars(): Formatted global merge var values based on
+   * setGlobalMergeVars(): Formatted global merge var values based on
    * Mandrill send-template API spec:
    * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
    *
@@ -207,7 +208,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    *   digest batch.
    *
    */
-  private function setGlobalMergeVars() {
+  private function getGlobalMergeVars() {
 
     foreach($this->globalMergeVars as $name => $content) {
       $globalMergeVars[] = [
@@ -220,25 +221,55 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
+   * getUsersDigestSettings(): Generate to and merge_var values using the same index to ensure the indexes match.
    *
+   * @return array $userDigestSettings
    */
   private function getUsersDigestSettings() {
 
+    $messageIndex = 0;
+    $to = [];
+    $mergeVars = [];
+
     foreach($this->users as $user) {
-      $userDigestSettings[] = [
-        'to' => $this->setTo($user),
-        'merger_vars' => $this->getUserMergeVars($user),
-      ];
+      $to[$messageIndex] = $this->setTo($user);
+      $mergeVars[$messageIndex] = $this->getUserMergeVars($user);
+      $messageIndex++;
     }
+
+    $userDigestSettings = [
+      'to' => $to,
+      'merge_vars' => $mergeVars,
+    ];
 
     return $userDigestSettings;
   }
 
   /**
+   * getUserMergeVars(): Structure user merge_var values based on Mandrill API.
+   * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
    *
+   * @param object $user
+   *   A user object with all user related settings.
+   *
+   *  @return array $userMergeVars
+   *    Formatted user specific merge_var values.
    */
-  private function getUserMergeVars() {
+  private function getUserMergeVars($user) {
 
+    foreach($user->merge_vars as $name => $value) {
+      $vars[] = [
+        'name' => $name,
+        'content' => $value,
+      ];
+    }
+
+    $userMergeVars = [
+      'rcpt' => $user->email,
+      'vars' => $vars
+    ];
+
+    return $userMergeVars;
   }
 
   /**
@@ -265,8 +296,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   private function setTo($user) {
 
     $to = [
-      'email' => $user['email'],
-      'name' => $user['fname'],
+      'email' => $user->email,
+      'name' => $user->firstName,
       'to' => 'to',
     ];
     return $to;
@@ -369,20 +400,17 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
     // Gather user settings in single request to ensure "to" and "marge_vars" are in sync
     $usersDigestSettings = $this->getUsersDigestSettings();
-    // to
     $to = $usersDigestSettings['to'];
+    $userMergeVars = $usersDigestSettings['merge_vars'];
 
     // global merge vars
     $globalMergeVars = $this->getGlobalMergeVars();
-
-    // User merge vars
-    $userMergeVars = $usersDigestSettings['merge_vars'];
 
     // tags
     $tags = $this->getDigestMessageTags();
 
     $composedDigestSubmission = array(
-      'subject' => $subjects[$subjectCount],
+      'subject' => $subject,
       'from_email' => $from['email'],
       'from_name' => $from['name'],
       'to' => $to,
@@ -408,7 +436,6 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
           'content' => ''
       ),
     );
-
     $composedDigestBatch = $this->composeDigestBatch();
 
     $mandrillResults = $this->mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestBatch);
