@@ -18,7 +18,8 @@ class MBC_DigestEmail_User
   // Three weeks, 60 seconds x 60 minutes x 24 hours x 3 weeks
   // STD = Seconds To Die
   // What, you were thinking something else for "STD"?!?
-  const SUBSCRIPTION_LINK_STL = 1814400;
+  const SUBSCRIPTION_LINK_STD = 1814400;
+  const  MAX_CAMPAIGNS = 5;
 
   /**
    * Singleton instance of application configuration settings.
@@ -46,14 +47,28 @@ class MBC_DigestEmail_User
    *
    * @var string
    */
-  protected $email;
+  public $email;
 
   /**
    * The first name of the user. Defaults to "Doer" when value is not set.
    *
    * @var string
    */
-  protected $firstName;
+  public $firstName;
+
+  /**
+   *
+   *
+   * @var integer
+   */
+  protected $drupal_uid;
+
+  /**
+   *
+   *
+   * @var object
+   */
+  protected $subscription_link;
 
   /**
    * The campaigns the user digest message will contain as active and needing report backs.
@@ -118,8 +133,9 @@ class MBC_DigestEmail_User
   /**
    *
    */
-  public function setDrupalUID() {
+  public function setDrupalUID($uid) {
 
+    $this->drupal_uid = $uid;
   }
 
   /**
@@ -156,12 +172,12 @@ class MBC_DigestEmail_User
   public function getSubsciptionsURL() {
 
     // Return cached existing link
-    if (isset($this->subscriptions)) {
+    if (isset($this->subscription_link)) {
 
       // More meaningful functionality when links are stored and retrieved in ds-digest-api as
       // persistant storage between digest runs. Long term storage will result in expired links over time.
       $expiryTimestamp = time() - self::SUBSCRIPTION_LINK_STD;
-      if (isset($this->subscriptions->created) && $this->subscriptions->created < date("Y-m-d H:i:s", $expiryTimestamp)) {
+      if (isset($this->subscription_link->created) && $this->subscription_link->created < date("Y-m-d H:i:s", $expiryTimestamp)) {
         return $this->buildSubscriptionsLink();
       }
 
@@ -176,10 +192,11 @@ class MBC_DigestEmail_User
    */
   private function buildSubscriptionsLink() {
 
-    $this->subscriptions->url = $this->MB_Toolbox->getUnsubscribeLink($this->email, $this->drupal_uid);
-    $this->subscriptions->created = date('c');
+    $this->subscription_link = new \stdClass();
+    $this->subscription_link->url = $this->mbToolbox->subscriptionsLinkGenerator($this->email, $this->drupal_uid);
+    $this->subscription_link->created = date('c');
 
-    return $this->subscriptions['url'];
+    return $this->subscription_link->url;
   }
 
   /*
@@ -190,7 +207,7 @@ class MBC_DigestEmail_User
    *    - ordered by user campaign signup
    *  - limit to maximum 5 campaigns
    */
-  private function processUserCampaigns() {
+  public function processUserCampaigns() {
 
     $staffPicks = array();
     $nonStaffPicks = array();
