@@ -40,6 +40,13 @@ $mbConfig->setProperty('mb_user_api_config', array(
   'port' => getenv('MB_USER_API_PORT')
 ));
 
+$subscriptionsSetting = $mbConfig->gatherSettings('subscriptions');
+$mbConfig->setProperty('subscriptions_config', array(
+  'host' =>  $subscriptionsSetting->url,
+  'ip' =>  $subscriptionsSetting->ip,
+  'port' => $subscriptionsSetting->port,
+));
+
 // StatHat
 $mbConfig->setProperty('statHat', new StatHat([
   'ez_key' => getenv("STATHAT_EZKEY"),
@@ -53,3 +60,6 @@ $mbConfig->setProperty('messageBroker_config', $mbRabbitConfig);
 $rabbitCredentials = $mbConfig->getProperty('rabbit_credentials');
 $messageBrokerConfig = $mbConfig->getProperty('messageBroker_config');
 $mbConfig->setProperty('messageBroker', new MessageBroker($rabbitCredentials, $messageBrokerConfig));
+
+$mbConfig->setProperty('mbToolbox', new MB_Toolbox());
+$mbConfig->setProperty('mbToolboxcURL', new MB_Toolbox_cURL());
