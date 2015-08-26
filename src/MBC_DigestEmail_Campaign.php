@@ -174,6 +174,7 @@ class MBC_DigestEmail_Campaign {
       $this->call_to_action = $campaignSettings->call_to_action;
     }
     else {
+      $this->call_to_action = '';
       echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') call_to_action not set.', PHP_EOL;
     }
     // DO IT: During Tip Header - step_pre[0]->header - nice to have but not a show stopper
@@ -181,6 +182,7 @@ class MBC_DigestEmail_Campaign {
       $this->during_tip_header = $campaignSettings->step_pre[0]->header;
     }
     else {
+      $this->during_tip_header = '';
       echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Header, step_pre[0]->header not set.', PHP_EOL;
     }
     // DO IT: During Tip Copy - step_pre[0]->copy - nice to have but not a show stopper
@@ -188,6 +190,7 @@ class MBC_DigestEmail_Campaign {
       $this->during_tip_copy = strip_tags($campaignSettings->step_pre[0]->copy);
     }
     else {
+      $this->during_tip_copy = '';
       echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
     }
 
