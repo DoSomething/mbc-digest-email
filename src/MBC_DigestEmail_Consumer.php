@@ -160,14 +160,14 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     }
 
     // Set message ID for ack_back
-    $mbcDEUser->setMessageID($userProperty['payload']);
+    $this->mbcDEUser->setMessageID($userProperty['payload']);
 
     // Add user object to users property of current instance of Consumer class only in the case where the user
     // object has at least on campaign entry. It's possible to get to this point with no campaign entries due
     // to encountering Exceptions.
-    if (count($mbcDEUser->campaigns) > 0) {
-      $this->users[] = $mbcDEUser;
-      return $mbcDEUser;
+    if (count($this->mbcDEUser->campaigns) > 0) {
+      $this->users[] = $this->mbcDEUser;
+      return $this->mbcDEUser;
     }
     else {
       return FALSE;
