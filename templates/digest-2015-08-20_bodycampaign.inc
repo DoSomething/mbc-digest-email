@@ -17,6 +17,7 @@
             <center>
               <h2 class="null" dir="ltr" style="text-align: left;"><span style="font-size:24px">*|CAMPAIGN_TITLE|*</span></h2>
               <h3 class="null" dir="ltr" style="text-align: left;"><font size="4">*|CALL_TO_ACTION|*</font></h3>
+              <p dir="ltr" style="text-align: left;">*|DO_IT_BODY|*</p>
               <p dir="ltr" style="text-align: left;"><strong>*|TIP_TITLE|*</strong>&nbsp;*|DURING_TIP|*</p>
             </center>
             <center>
