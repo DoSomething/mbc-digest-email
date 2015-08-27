@@ -28,7 +28,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
   // The number of messages to include in each batch digest submission to the service
   // that is used to send the messages.
-  const BATCH_SIZE = 2;
+  const BATCH_SIZE = 5000;
 
   /**
    *
