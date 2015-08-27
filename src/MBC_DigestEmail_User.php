@@ -71,6 +71,13 @@ class MBC_DigestEmail_User
   public $subscription_link;
 
   /**
+   *
+   *
+   * @var object
+   */
+  public $originalPayload;
+
+  /**
    * The campaigns the user digest message will contain as active and needing report backs.
    *
    * @var array
@@ -139,16 +146,16 @@ class MBC_DigestEmail_User
   }
 
   /**
-   * RabbitMQ message ID used to create the user object. Once the message has been fully processed
-   * the orginal message will be achknoledged and removed from the queue. This property will also
-   * be unset.
+   * setOrginalPayload(): RabbitMQ message payload used to create the user object. Once the message has been
+   * fully processed the orginal message will be achknoledged and removed from the queue. This property will
+   * also be unset to complete the process in preperation for a new batch of user objects.
    *
-   * @var object $message
+   * @var object $payload
    *   The orginal message consumed from the RabbitMQ queue.
    */
-  public function setMessageID($message) {
+  public function setOrginalPayload($payload) {
 
-    $this->messageID = $message->delivery_info['delivery_tag'];
+    $this->originalPayload = $payload;
   }
 
   /**
