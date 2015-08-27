@@ -21,8 +21,8 @@ use \Exception;
  * MBC_DigestEmail_Consumer class - functionality related to the Message Broker
  * consumer mbc-digest-email application.
  *
- * - Coordinate building user object including digest message contant specific to the user.
- * - Trigger sending batches of digest messages.
+ * Coordinate building user and campaign objects. Constructed objects are sent to a Messenger object
+ * to generate batches of digest messages to be sent through a Service object.
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
@@ -31,38 +31,46 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   const BATCH_SIZE = 5000;
 
   /**
-   *
+   * A list of user objects.
+   * @var array
    */
   private $users = [];
 
   /**
-   *
+   * A list of user objects.
+   * @var array
    */
   private $campaigns = [];
 
   /**
-   *
+   * A User object - each message from the consumed queue can result in a User object.
+   * @var object
    */
   private $mbcDEUser;
 
   /**
-   *
+   * A Messenger object. Handles combining User and Campain objects to compose a batch of digest
+   * messages. The messages are sent in batches using a Service object (Mandrill).
+   * @var object
    */
   private $mbcDEMessanger;
 
   /**
-   *
+   * __construct(): When a new Consumer class is created at the time of starting the mbc-digest-script
+   * this method will ensure key variables are constructed.
    */
   public function __construct() {
 
     parent::__construct();
 
-    // Future support of different Services other than Mandrill
-    // could be toggled at this point with logic for user origin.
-    // See mbc-registration-mobile for working example of toggling
-    // Based on user origin.
+    // Future support of different Services other than Mandrill could be toggled. Currently the Mandrill
+    // service is hard coded.at There's not reason more than one service could be used at the same time
+    // depending on the affiliates arrangements. Use of the differet Service classes could be toggled with
+    // logic for user origin.
 
-    // Create new Message object for user.
+    // See mbc-registration-mobile for working example of toggling based on user origin.
+
+    // Create new Message object.
     $this->mbcDEMessanger = new MBC_DigestEmail_MandrillMessenger();
   }
 
@@ -70,23 +78,16 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    * Coordinate processing of messages consumed fromn the target queue defined in the
    * application configuration.
    *
-   * @param array $message
+   * @param array
    *  The payload of the unserialized message being processed.
    */
   public function consumeDigestUserQueue($message) {
 
     parent::consumeQueue($message);
-    $queueMessages = parent::queueStatus();
-
-    if (isset($this->users)) {
-      $waitingUserMessages = count($this->users);
-    }
-    else {
-      $waitingUserMessages = 0;
-    }
 
     // Process messages in batches for submission to the service. Once the number of
     // messages processed reached the BATCH_SIZE send messages.
+    $waitingUserMessages = $this->waitingUserMessages();
     if ($waitingUserMessages < self::BATCH_SIZE) {
 
       if ($this->canProcess()) {
@@ -104,7 +105,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Send batch of user digest messages OR
     // If the number of messages remaining to be processed is zero and there are user
     // objects waiting to be sent create a batch of messages from the remaining user objects.
-    elseif (($waitingUserMessages >= self::BATCH_SIZE) ||
+    $queueMessages = parent::queueStatus();
+    $waitingUserMessages = $this->waitingUserMessages();
+    if (($waitingUserMessages >= self::BATCH_SIZE) ||
         ($queueMessages['ready'] == 0 && $waitingUserMessages > 0)) {
 
       // @todo: Support different services based on interface base class
@@ -115,13 +118,31 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
       unset($this->users);
     }
-
   }
+
+/**
+ * waitingUserMessages(): Report the number of users waiting to be processed. Used to determine if
+ * the waiting users should be sent as a batch of messages. This is a reqwuirement at the end of a
+ * digest run when the remaining users is less that a batch size. Without this test the last group of
+ * users would not get processed.
+ *
+ * @return integer $userCount
+ */
+private function waitingUserMessages() {
+
+  if (isset($this->users)) {
+    $userCount = count($this->users);
+  }
+  else {
+    $userCount = 0;
+  }
+  return $userCount;
+}
 
   /**
    * Sets values for processing based on contents of message from consumed queue.
    *
-   * @param array $userProperty
+   * @param array
    *  The indexed array of user properties based on the message sent to the digestUserQueue.
    */
   protected function setter($userProperty) {
@@ -182,23 +203,21 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     // Add user object to users property of current instance of Consumer class only in the case where the user
     // object has at least on campaign entry. It's possible to get to this point with no campaign entries due
-    // to encountering Exceptions.
+    // to encountering Exceptions in the Campaign object creation process.
     if (count($this->mbcDEUser->campaigns) > 0) {
       $this->users[] = $this->mbcDEUser;
       return $this->mbcDEUser;
     }
     else {
+      // Don't do any further rpocessing on this message
+      $this->messageBroker->sendAck($userProperty['payload']);
       return FALSE;
     }
-
   }
 
   /**
    * Evaluate message to determine if it can be processed based on formatting and
    * business rules.
-   *
-   * @param array $message
-   *  The payload of the message being processed.
    */
   protected function canProcess() {
 
@@ -213,7 +232,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       return FALSE;
     }
 
-    // Confirm there's no reportbacks
+    // Confirm there's no reportbacks. Should have been removed in the producer of the message.
     if (!(isset($this->message['campaigns']))) {
       foreach($this->message['campaigns'] as $campaign) {
         if (isset($campaign['reportback'])) {
@@ -232,7 +251,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   }
 
   /**
-   * Process message from consumed queue. process() involves apply methods to existing objects as
+   * Process message from consumed queue. process() involves applying methods to existing objects as
    * a part of consuming a message in a queue.
    */
   protected function process() {
