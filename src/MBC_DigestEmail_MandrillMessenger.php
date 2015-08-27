@@ -31,6 +31,26 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   /**
    *
    */
+  private $mbConfig;
+
+  /**
+   *
+   */
+  private $messageBroker;
+
+  /**
+   *
+   */
+  private $statHat;
+
+  /**
+   *
+   */
+  private $mbToolbox;
+
+  /**
+   *
+   */
   private $userIndex;
 
   /**
@@ -60,6 +80,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
     // Application configuration
     $this->mbConfig = MB_Configuration::getInstance();
+    $this->messageBroker = $this->mbConfig->getProperty('messageBroker');
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
 
@@ -146,7 +167,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->users[$userEmail]->merge_vars = [
       'FNAME' =>  $firstName,
       'CAMPAIGNS' => $campaignsMarkup,
-      'UNSUBSCRIBE_LINK' => $unsubscribeLinkMarkup,
+      'SUBSCRIPTIONS_LINK' => $unsubscribeLinkMarkup,
     ];
   }
 
@@ -304,20 +325,6 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /*
-   *
-   */
-  private function buildMergeUserVars($user) {
-
-    $user->merge_vars['FNAME'] = ucfirst($user->first_name);
-    $user->merge_vars['UNSUBSCRIBE_LINK'] = '';
-
-    // Merge campaign template with campaign values
-    $user->merge_vars['CAMPAIGNS'] = '';
-
-    return $user;
-  }
-
-  /*
    * An array of string to tag the message with. Stats are accumulated using
    * tags, though we only store the first 100 we see, so this should not be
    * unique or change frequently. Tags should be 50 characters or less. Any
@@ -439,5 +446,29 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $composedDigestBatch = $this->composeDigestBatch();
 
     $mandrillResults = $this->mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestBatch);
+    $this->wrapUp($mandrillResults);
+  }
+
+  /**
+   *
+   */
+  private function wrapUp($results) {
+
+    // Report send results to console
+    $stats = [];
+    foreach ($results as $sendStats) {
+      if (isset($stats[$sendStats['status']])) {
+        $stats[$sendStats['status']]++;
+      }
+      else {
+        $stats[$sendStats['status']] = 1;
+      }
+
+      // Remove message from queue on success
+      if ($sendStats['status'] == 'sent') {
+        $this->messageBroker->sendAck($this->users[$sendStats['email']]->originalPayload);
+      }
+    }
+    echo 'mandrillResults: ' . print_r($stats, TRUE), PHP_EOL;
   }
 }
