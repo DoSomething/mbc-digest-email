@@ -78,7 +78,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    * Coordinate processing of messages consumed fromn the target queue defined in the
    * application configuration.
    *
-   * @param array
+   * @param array $message
    *  The payload of the unserialized message being processed.
    */
   public function consumeDigestUserQueue($message) {
@@ -142,7 +142,7 @@ private function waitingUserMessages() {
   /**
    * Sets values for processing based on contents of message from consumed queue.
    *
-   * @param array
+   * @param array $userProperty
    *  The indexed array of user properties based on the message sent to the digestUserQueue.
    */
   protected function setter($userProperty) {
@@ -198,7 +198,7 @@ private function waitingUserMessages() {
       }
     }
 
-    // Set message ID for ack_back
+    // Keep track of the original message payload. This includes the message ID for ack_backs.
     $this->mbcDEUser->setOrginalPayload($userProperty['payload']);
 
     // Add user object to users property of current instance of Consumer class only in the case where the user
@@ -218,6 +218,8 @@ private function waitingUserMessages() {
   /**
    * Evaluate message to determine if it can be processed based on formatting and
    * business rules.
+   *
+   * @return boolean
    */
   protected function canProcess() {
 
