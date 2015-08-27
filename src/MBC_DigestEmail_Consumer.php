@@ -55,6 +55,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    */
   public function __construct() {
 
+    parent::__construct();
+
     // Future support of different Services other than Mandrill
     // could be toggled at this point with logic for user origin.
     // See mbc-registration-mobile for working example of toggling
@@ -74,8 +76,18 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   public function consumeDigestUserQueue($message) {
 
     parent::consumeQueue($message);
+    $queueMessages = parent::queueStatus();
 
-    if (count($this->users) < self::BATCH_SIZE) {
+    if (isset($this->users)) {
+      $waitingUserMessages = count($this->users);
+    }
+    else {
+      $waitingUserMessages = 0;
+    }
+
+    // Process messages in batches for submission to the service. Once the number of
+    // messages processed reached the BATCH_SIZE send messages.
+    if ($waitingUserMessages < self::BATCH_SIZE) {
 
       if ($this->canProcess()) {
 
@@ -88,12 +100,18 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
         }
       }
     }
-    // Send batch of user digest messages
-    else {
+
+    // Send batch of user digest messages OR
+    // If the number of messages remaining to be processed is zero and there are user
+    // objects waiting to be sent create a batch of messages from the remaining user objects.
+    elseif (($waitingUserMessages >= self::BATCH_SIZE) ||
+        ($queueMessages['ready'] == 0 && $waitingUserMessages > 0)) {
 
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessanger->sendDigestBatch();
-      $this->logStatus();
+
+      // @todo: Log digest message activity
+      // $this->logStatus();
 
       unset($this->users);
     }
@@ -160,7 +178,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     }
 
     // Set message ID for ack_back
-    $this->mbcDEUser->setMessageID($userProperty['payload']);
+    $this->mbcDEUser->setOrginalPayload($userProperty['payload']);
 
     // Add user object to users property of current instance of Consumer class only in the case where the user
     // object has at least on campaign entry. It's possible to get to this point with no campaign entries due
