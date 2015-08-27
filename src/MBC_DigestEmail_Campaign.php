@@ -187,7 +187,7 @@ class MBC_DigestEmail_Campaign {
     }
     // DO IT: During Tip Copy - step_pre[0]->copy - nice to have but not a show stopper
     if (isset($campaignSettings->step_pre[0]->copy)) {
-      $this->during_tip_copy = strip_tags($campaignSettings->step_pre[0]->copy);
+      $this->during_tip_copy = ': ' . strip_tags($campaignSettings->step_pre[0]->copy);
     }
     else {
       $this->during_tip_copy = '';
