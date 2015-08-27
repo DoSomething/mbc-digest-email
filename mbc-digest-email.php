@@ -21,6 +21,6 @@ echo '------- mbc-user-digest START: ' . date('j D M Y G:i:s T') . ' -------', P
 
 // Kick off
 $mb = $mbConfig->getProperty('messageBroker');
-$mb->consumeMessage(array(new MBC_DigestEmail_Consumer(), 'consumeUserDigestQueue'));
+$mb->consumeMessage(array(new MBC_DigestEmail_Consumer(), 'consumeDigestUserQueue'));
 
 echo '------- mbc-user-digest END: ' . date('j D M Y G:i:s T') . ' -------', PHP_EOL;
