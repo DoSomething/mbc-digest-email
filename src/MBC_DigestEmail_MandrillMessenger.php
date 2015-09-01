@@ -83,12 +83,12 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->messageBroker = $this->mbConfig->getProperty('messageBroker');
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
+    $this->mandrill = $this->mbConfig->getProperty('mandrill');
 
     // Resources for building digest batch
     $this->userIndex = 0;
     $this->campaignTempate = parent::getTemplate('campaign-markup.inc');
     $this->campaignTempateDivider = parent::getTemplate('campaign-divider-markup.inc');
-    $this->mandrill = new \Mandrill();
     $this->setGlobalMergeVars();
   }
 
