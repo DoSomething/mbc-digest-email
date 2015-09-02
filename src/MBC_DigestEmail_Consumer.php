@@ -118,7 +118,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     $queueMessages = parent::queueStatus('digestUserQueue');
     $waitingUserMessages = $this->waitingUserMessages();
     if (($waitingUserMessages >= $this->batchSize) ||
-        ($waitingUserMessages < $this->batchSize && $this->batchSize != 0 && $queueMessages['unacked'] == 0)) {
+        ($waitingUserMessages < $this->batchSize && $queueMessages['ready'] == 0)) {
 
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessanger->sendDigestBatch();
