@@ -225,8 +225,7 @@ private function waitingUserMessages() {
       return $this->mbcDEUser;
     }
     else {
-      // Don't do any further rpocessing on this message
-      $this->messageBroker->sendAck($userProperty['payload']);
+      // Don't do any further processing on this message
       return FALSE;
     }
   }
