@@ -278,6 +278,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private function getUserMergeVars($user) {
 
+    $vars = [];
     foreach($user->merge_vars as $name => $value) {
       $vars[] = [
         'name' => $name,
@@ -454,6 +455,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private function wrapUp($results) {
 
+    echo 'Mandrill results: ' . print_r($results, TRUE), PHP_EOL;
+
     // Report send results to console
     $stats = [];
     foreach ($results as $sendStats) {
@@ -463,12 +466,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       else {
         $stats[$sendStats['status']] = 1;
       }
-
-      // Remove message from queue on success
-      if ($sendStats['status'] == 'sent') {
-        $this->messageBroker->sendAck($this->users[$sendStats['email']]->originalPayload);
-      }
     }
-    echo 'mandrillResults: ' . print_r($stats, TRUE), PHP_EOL;
+    echo 'mandrillResults: ' . print_r($stats, TRUE), PHP_EOL . PHP_EOL;
+    unset($this->users);
   }
 }
