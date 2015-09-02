@@ -126,6 +126,12 @@ class MBC_DigestEmail_Campaign {
    public $markup;
 
   /**
+   * A log of errors encountered when collecting campaign details to generate content for digest messages.
+   * @var array $campaignErrors
+   */
+   public $campaignErrors = [];
+
+  /**
    * __construct(): Trigger populating values in Campaign object when object is created.
    *
    * @param integer $nid
@@ -138,7 +144,6 @@ class MBC_DigestEmail_Campaign {
     $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
 
     $this->add($nid);
-    // $this->generateMarkup($nid);
   }
 
   /**
@@ -158,7 +163,7 @@ class MBC_DigestEmail_Campaign {
       $this->title = $campaignSettings->title;
     }
     else {
-      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' title not set.', PHP_EOL;
+      echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' title not set.', PHP_EOL;
       throw new Exception('Unable to create Campaign object : ' . $nid . ' title not set.');
     }
     // image_cover->src - required
@@ -166,7 +171,7 @@ class MBC_DigestEmail_Campaign {
       $this->image_campaign_cover = $campaignSettings->image_cover->src;
     }
     else {
-      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') image_cover->src not set.', PHP_EOL;
+      echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') image_cover->src not set.', PHP_EOL;
       throw new Exception('Unable to create Campaign object : ' . $nid . ' (' . $this->title . ') image_cover->src not set.');
     }
     // call_to_action - nice to have but not a show stopper
@@ -175,7 +180,8 @@ class MBC_DigestEmail_Campaign {
     }
     else {
       $this->call_to_action = '';
-      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') call_to_action not set.', PHP_EOL;
+      $this->campaignErrors[] = 'Campaign ' . $nid . ' (' . $this->title . ') call_to_action not set.';
+      echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') call_to_action not set.', PHP_EOL;
     }
     // DO IT: During Tip Header - step_pre[0]->header - nice to have but not a show stopper
     if (isset($campaignSettings->step_pre[0]->header)) {
@@ -183,7 +189,8 @@ class MBC_DigestEmail_Campaign {
     }
     else {
       $this->during_tip_header = '';
-      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Header, step_pre[0]->header not set.', PHP_EOL;
+      $this->campaignErrors[] = 'Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Header, step_pre[0]->header not set.';
+      echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Header, step_pre[0]->header not set.', PHP_EOL;
     }
     // DO IT: During Tip Copy - step_pre[0]->copy - nice to have but not a show stopper
     if (isset($campaignSettings->step_pre[0]->copy)) {
@@ -191,7 +198,8 @@ class MBC_DigestEmail_Campaign {
     }
     else {
       $this->during_tip_copy = '';
-      echo 'MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
+      $this->campaignErrors[] = 'Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.';
+      echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
     }
 
     // Optional
