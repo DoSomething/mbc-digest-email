@@ -11,8 +11,8 @@
 
 namespace DoSomething\MBC_DigestEmail;
 
+use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
-use RabbitMq\ManagementApi\Client;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_BaseConsumer;
 use \Exception;
@@ -26,40 +26,45 @@ use \Exception;
  */
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
-  // The number of messages to include in each batch digest submission to the service
-  // that is used to send the messages.
-  const BATCH_SIZE = 5000;
-
   /**
    * A list of user objects.
-   * @var array
+   * @var array $users
    */
   private $users = [];
 
   /**
    * A list of user objects.
-   * @var array
+   * @var array $campaigns
    */
   private $campaigns = [];
 
   /**
    * A User object - each message from the consumed queue can result in a User object.
-   * @var object
+   * @var object $mbcDEUser
    */
   private $mbcDEUser;
 
   /**
    * A Messenger object. Handles combining User and Campain objects to compose a batch of digest
    * messages. The messages are sent in batches using a Service object (Mandrill).
-   * @var object
+   * @var object $mbcDEMessanger
    */
   private $mbcDEMessanger;
+
+  /**
+   * Collect errors reported when generating campaign object. The contents of this property will be
+   * used to generate a report of campaigns missing content.
+   * @var array $campaignErrors
+   */
+  private $campaignErrors;
 
   /**
    * __construct(): When a new Consumer class is created at the time of starting the mbc-digest-script
    * this method will ensure key variables are constructed.
    */
-  public function __construct() {
+  public function __construct($batchSize) {
+
+    $this->batchSize = $batchSize;
 
     parent::__construct();
 
@@ -70,8 +75,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     // See mbc-registration-mobile for working example of toggling based on user origin.
 
-    // Create new Message object.
-    $this->mbcDEMessanger = new MBC_DigestEmail_MandrillMessenger();
+    $this->mbConfig = MB_Configuration::getInstance();
+    $this->mbcDEMessanger = $this->mbConfig->getProperty('mbcDEMessanger');
   }
 
   /**
@@ -84,11 +89,13 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   public function consumeDigestUserQueue($message) {
 
     parent::consumeQueue($message);
+    echo PHP_EOL . PHP_EOL;
+    echo '** Processing: ' . $this->message['email'], PHP_EOL;
 
     // Process messages in batches for submission to the service. Once the number of
     // messages processed reached the BATCH_SIZE send messages.
     $waitingUserMessages = $this->waitingUserMessages();
-    if ($waitingUserMessages < self::BATCH_SIZE) {
+    if ($waitingUserMessages < $this->batchSize) {
 
       if ($this->canProcess()) {
 
@@ -100,20 +107,25 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
           $this->process();
         }
       }
+
+      $this->messageBroker->sendAck($this->message['payload']);
     }
 
     // Send batch of user digest messages OR
     // If the number of messages remaining to be processed is zero and there are user
     // objects waiting to be sent create a batch of messages from the remaining user objects.
-    $queueMessages = parent::queueStatus();
+    // Not clear on the ready vs unacked values as the docs suggest re-declaring
+    $queueMessages = parent::queueStatus('digestUserQueue');
     $waitingUserMessages = $this->waitingUserMessages();
-    if (($waitingUserMessages >= self::BATCH_SIZE) ||
-        ($queueMessages['ready'] == 0 && $waitingUserMessages > 0)) {
+    if (($waitingUserMessages >= $this->batchSize) ||
+        ($waitingUserMessages < $this->batchSize && $this->batchSize != 0 && $queueMessages['unacked'] == 0)) {
 
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessanger->sendDigestBatch();
 
-      // @todo: Log digest message activity
+      // @todo: Log digest message activity, include errors encountered generating campaign
+      // objects: $this->campaignErrors
+      //
       // $this->logStatus();
 
       unset($this->users);
@@ -181,7 +193,7 @@ private function waitingUserMessages() {
         }
         catch (Exception $e) {
           // @todo: Log/report missing campaign value.
-          echo 'MBC_DigestEmail_Consumer->setter(): Error creating  MBC_DigestEmail_Campaign object.' . $e->getMessage();
+          echo '- MBC_DigestEmail_Consumer->setter(): Error creating MBC_DigestEmail_Campaign object: ' . $e->getMessage(), PHP_EOL;
           $mbcDECampaign = [
             'nid' => $campaign['nid'],
             'creationError' => $e->getMessage(),
@@ -189,6 +201,10 @@ private function waitingUserMessages() {
         }
         // Add campaign object to concerned properties and related objects.
         $this->campaigns[$campaign['nid']] = $mbcDECampaign;
+
+        if (isset($mbcDECampaign->campaignErrors) && count($mbcDECampaign->campaignErrors) > 0) {
+          $this->campaignErrors[$campaign['nid']] = $mbcDECampaign->campaignErrors;
+        }
       }
 
       // Exclude campaings that are not functional Campaign objects.
