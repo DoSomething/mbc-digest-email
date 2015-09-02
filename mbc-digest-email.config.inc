@@ -7,7 +7,7 @@ use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
-use DoSomething\MBC_DigestEmail\MBC_RabbitMQManagementAPI;
+use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
 use DoSomething\MBC_DigestEmail\MBC_DigestEmail_MandrillMessenger;
 
 // Load configuration settings common to the Message Broker system
@@ -67,7 +67,7 @@ $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxcURL', new MB_Toolbox_cURL());
 $mbConfig->setProperty('mbcDEMessanger', new MBC_DigestEmail_MandrillMessenger());
 
-$mbConfig->setProperty('mbcRabbitMQManagementAPI', new MBC_RabbitMQManagementAPI([
+$mbConfig->setProperty('mbcRabbitMQManagementAPI', new MB_RabbitMQManagementAPI([
   'domain' => getenv("MB_RABBITMQ_MANAGEMENT_API_HOST"),
   'port' => getenv('MB_RABBITMQ_MANAGEMENT_API_PORT'),
   'vhost' => getenv('MB_RABBITMQ_MANAGEMENT_API_VHOST'),
