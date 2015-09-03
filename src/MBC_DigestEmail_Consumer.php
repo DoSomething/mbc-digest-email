@@ -204,6 +204,7 @@ private function waitingUserMessages() {
         try {
           // Create Campaign object and add to Consumer property of all Campaigns to be processed
           // in batch being sent to the Messenger object.
+          echo '- creating new campaign object nid: ' . $campaign['nid'], PHP_EOL;
           $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
         }
         catch (Exception $e) {
@@ -220,6 +221,9 @@ private function waitingUserMessages() {
         if (isset($mbcDECampaign->campaignErrors) && count($mbcDECampaign->campaignErrors) > 0) {
           $this->campaignErrors[$campaign['nid']] = $mbcDECampaign->campaignErrors;
         }
+      }
+      else {
+        echo '- Campaign ($this->campaigns[]) record nid: ' . $campaign['nid'] . ' already exists.', PHP_EOL;
       }
 
       // Exclude campaings that are not functional Campaign objects.
