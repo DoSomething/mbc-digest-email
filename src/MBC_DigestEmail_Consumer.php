@@ -90,25 +90,31 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     parent::consumeQueue($message);
     echo PHP_EOL . PHP_EOL;
-    echo '** Processing: ' . $this->message['email'], PHP_EOL;
+    echo '** Consuming: ' . $this->message['email'], PHP_EOL;
 
     // Process messages in batches for submission to the service. Once the number of
     // messages processed reached the BATCH_SIZE send messages.
     $waitingUserMessages = $this->waitingUserMessages();
+
+    echo '- waitingUserMessages: ' . $waitingUserMessages, PHP_EOL;
+    echo '- batchSize: ' . $this->batchSize, PHP_EOL;
     if ($waitingUserMessages < $this->batchSize) {
 
       if ($this->canProcess()) {
 
+        echo '- canProcess(): OK', PHP_EOL;
         $setterOK = $this->setter($this->message);
 
         // Build out user object and gather / trigger building campaign objects
         // based on user campaign activity
         if ($setterOK) {
+          echo '- setter(): OK', PHP_EOL;
           $this->process();
         }
       }
 
       $this->messageBroker->sendAck($this->message['payload']);
+      echo '- Ack sent: OK', PHP_EOL . PHP_EOL;
     }
 
     // Send batch of user digest messages OR
@@ -117,8 +123,14 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // Not clear on the ready vs unacked values as the docs suggest re-declaring
     $queueMessages = parent::queueStatus('digestUserQueue');
     $waitingUserMessages = $this->waitingUserMessages();
+    echo '- queueMessages ready: ' . $queueMessages['ready'], PHP_EOL;
+    echo '- queueMessages unacked: ' . $queueMessages['unacked'], PHP_EOL;
+    echo '- waitingUserMessages: ' . $waitingUserMessages, PHP_EOL;
+
     if (($waitingUserMessages >= $this->batchSize) ||
         ($waitingUserMessages < $this->batchSize && $queueMessages['ready'] == 0)) {
+
+      echo '%% sending email batch', PHP_EOL . PHP_EOL;
 
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessanger->sendDigestBatch();
@@ -128,8 +140,10 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       //
       // $this->logStatus();
 
+      echo '- unset $this->users: ' . count($this->users), PHP_EOL . PHP_EOL;
       unset($this->users);
     }
+    echo '~~~~~~~~~~~~~~', PHP_EOL . PHP_EOL;
   }
 
 /**
@@ -238,6 +252,11 @@ private function waitingUserMessages() {
    */
   protected function canProcess() {
 
+    if (isset($this->users[$this->message['email']])) {
+      echo 'MBC_DigestEmail_Consumer->canProcess(): Duplicate email.', PHP_EOL;
+      return FALSE;
+    }
+
     if (!isset($this->message['email'])) {
       echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing email.', PHP_EOL;
       return FALSE;
@@ -253,6 +272,7 @@ private function waitingUserMessages() {
     if (!(isset($this->message['campaigns']))) {
       foreach($this->message['campaigns'] as $campaign) {
         if (isset($campaign['reportback'])) {
+          echo 'MBC_DigestEmail_Consumer->canProcess(): Reportback found. Something funky is up with the producer.', PHP_EOL;
           return FALSE;
         }
       }
