@@ -9,7 +9,7 @@
 
 date_default_timezone_set('America/New_York');
 define('CONFIG_PATH',  __DIR__ . '/messagebroker-config');
-define('BATCH_SIZE', 500);
+define('BATCH_SIZE', 1000);
 
 // Load up the Composer autoload magic
 require_once __DIR__ . '/vendor/autoload.php';
