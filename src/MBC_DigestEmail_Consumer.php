@@ -224,6 +224,7 @@ private function waitingUserMessages() {
       }
       else {
         echo '- Campaign ($this->campaigns[]) record nid: ' . $campaign['nid'] . ' already exists.', PHP_EOL;
+        $mbcDECampaign = $this->campaigns[$campaign['nid']];
       }
 
       // Exclude campaings that are not functional Campaign objects.
