@@ -195,6 +195,7 @@ private function waitingUserMessages() {
     $this->mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
 
     // List of campaign ids
+    echo 'setter() campaigns: ' . count($userProperty['campaigns']), PHP_EOL;
     foreach($userProperty['campaigns'] as $campaign) {
 
       // Build campaign object if it does not already exist
@@ -240,6 +241,7 @@ private function waitingUserMessages() {
     }
     else {
       // Don't do any further processing on this message
+      echo '- setter() FALSE: no campaigns to process', PHP_EOL;
       return FALSE;
     }
   }
