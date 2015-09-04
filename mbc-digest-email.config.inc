@@ -32,7 +32,9 @@ $mbConfig->setProperty('rabbitapi_credentials', [
 ]);
 $mbConfig->setProperty('ds_drupal_api_config', [
   'host' => getenv("DS_DRUPAL_API_HOST"),
-  'port' => getenv('DS_DRUPAL_API_PORT')
+  'port' => getenv('DS_DRUPAL_API_PORT'),
+  'username' => getenv("DS_DRUPAL_API_USERNAME"),
+  'password' => getenv('DS_DRUPAL_API_PASSWORD'),
 ]);
 $mbConfig->setProperty('mb_user_api_config', [
   'host' => getenv("MB_USER_API_HOST"),
