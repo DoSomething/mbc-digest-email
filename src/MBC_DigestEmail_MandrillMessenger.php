@@ -19,62 +19,69 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   const MAX_CAMPAIGNS = 5;
 
   /*
-   *
+   * User object to send digest messages to.
+   * @var array $users
    */
   private $users = [];
 
   /**
-   *
+   * Campaign objects to reference when building digest message contents.
+   * @var array $campaigns
    */
   private $campaigns = [];
 
   /**
-   *
+   * Singleton instance of application configuration settings.
+   * @var object $mbConfig
    */
   private $mbConfig;
 
   /**
-   *
+   * Message Broker library of RabbitMQ methods.
+   * @var object $messageBroker
    */
   private $messageBroker;
 
   /**
-   *
+   * Library of methods to support reporting activity to StatHat service.
+   * @var object $statHat
    */
   private $statHat;
 
   /**
-   *
+   * Collection of methods used by applications withing the Message Broker system.
+   * @var object $mbToolbox
    */
   private $mbToolbox;
 
   /**
-   *
-   */
-  private $userIndex;
-
-  /**
-   *
+   * Markup for a campaign rom in a user digest message.
+   * @var string $campaignTempate
    */
   private $campaignTempate;
 
   /**
-   *
+   * The divider markup that goes between campaign rows in a digest message.
+   * @var string $campaignTempateDivider
    */
   private $campaignTempateDivider;
 
   /**
-   *
+   * A collection of methods and properties for submissions to the Mandrill API.
+   * @var object $mandrill
    */
   private $mandrill;
 
   /**
-   *
+   * Common settings between all of the digest messages that will be merged into the template to help
+   * compose the user message.
+   * @var array $globalMergeVars
    */
   private $globalMergeVars;
 
   /*
-   *
+   * Assemble methods and template markup to construct collection of user digest message
+   * submission to the Mandrill email service.
    */
   public function __construct() {
 
@@ -192,7 +199,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     foreach($this->users[$userEmail]->campaigns as $nid => $campaign) {
       $markup .= $this->campaigns[$nid]->markup;
 
-      // Add divider markup if more campaings are to be added
+      // Add divider markup if more campaigns are to be added
       if ($totalCampaigns - 1 > $campaignCounter) {
         $markup .= $this->campaignTempateDivider;
       }
@@ -245,7 +252,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    * getUsersDigestSettings(): Generate "to" and "merge_var" values using the same index to ensure the indexes match.
    *
    * @return array $userDigestSettings
-   *   Formatted values based on Mandrill API requirments.
+   *   Formatted values based on Mandrill API requirements.
    */
   private function getUsersDigestSettings() {
 
@@ -313,7 +320,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    * ],
    *
    * "type": "to" - the header type to use for the recipient, defaults to "to"
-   * if not provided oneof(to, cc, bcc)
+   * if not provided one of(to, cc, bcc)
    *
    * @param array $targetUsers
    *   Details about user to send digest message to.
@@ -377,7 +384,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       'Your weekly campaign tips: comin\' atcha!',
       'Fresh out the oven (just for you!)',
     );
-    // Sequenilly select an item from the list of subjects, a different one
+    // Sequentially select an item from the list of subjects, a different one
     // every week and start from the top once the end of the list is reached
     $subjectCount = (int) abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
 
@@ -385,7 +392,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /*
-   * getDigestMessageFrom(): Generate the message from name and email adddress.
+   * getDigestMessageFrom(): Generate the message from name and email address.
    *
    * @return array $from
    *   String values of the sender of the digest message.
@@ -401,7 +408,10 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /*
+   * composeDigestBatch(): Assemble all of the parts to create a sendTemplate submission to the Mandrill API.
    *
+   * @return array
+   *   All of the composed parts.
    */
   private function composeDigestBatch() {
 
@@ -437,7 +447,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   * sendDigestBatch(): Send all of the esential parts for a sendTeamplate submission to the Mandrill API.
+   * sendDigestBatch(): Send all of the essential parts for a sendTeamplate submission to the Mandrill API.
    */
   public function sendDigestBatch() {
 
@@ -462,7 +472,10 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
+   * wrapUp(): Post submission to Mandrill service.
    *
+   * @param array $results
+   *   The results of the submission to the Mandrill API.
    */
   private function wrapUp($results) {
 
