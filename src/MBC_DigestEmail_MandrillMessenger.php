@@ -242,9 +242,10 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   * getUsersDigestSettings(): Generate to and merge_var values using the same index to ensure the indexes match.
+   * getUsersDigestSettings(): Generate "to" and "merge_var" values using the same index to ensure the indexes match.
    *
    * @return array $userDigestSettings
+   *   Formatted values based on Mandrill API requirments.
    */
   private function getUsersDigestSettings() {
 
@@ -252,18 +253,23 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $to = [];
     $mergeVars = [];
 
-    foreach($this->users as $user) {
-      $to[$messageIndex] = $this->setTo($user);
-      $mergeVars[$messageIndex] = $this->getUserMergeVars($user);
-      $messageIndex++;
+    if (!(isset($this->users)) || count($this->users) == 0) {
+      throw new Exception('getUsersDigestSettings() $this->users not set.');
     }
+    else {
+      foreach($this->users as $user) {
+        $to[$messageIndex] = $this->setTo($user);
+        $mergeVars[$messageIndex] = $this->getUserMergeVars($user);
+        $messageIndex++;
+      }
 
-    $userDigestSettings = [
-      'to' => $to,
-      'merge_vars' => $mergeVars,
-    ];
+      $userDigestSettings = [
+        'to' => $to,
+        'merge_vars' => $mergeVars,
+      ];
 
-    return $userDigestSettings;
+      return $userDigestSettings;
+    }
   }
 
   /**
@@ -431,7 +437,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   *
+   * sendDigestBatch(): Send all of the esential parts for a sendTeamplate submission to the Mandrill API.
    */
   public function sendDigestBatch() {
 
@@ -444,10 +450,15 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
           'content' => ''
       ),
     );
-    $composedDigestBatch = $this->composeDigestBatch();
+    try {
+      $composedDigestBatch = $this->composeDigestBatch();
 
-    $mandrillResults = $this->mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestBatch);
-    $this->wrapUp($mandrillResults);
+      $mandrillResults = $this->mandrill->messages->sendTemplate($templateName, $templateContent, $composedDigestBatch);
+      $this->wrapUp($mandrillResults);
+    }
+    catch (Exception $e) {
+      echo '- MBC_DigestEmail_MandrillMessenger->sendDigestBatch(): Error creating composed digest batch: ' . $e->getMessage(), PHP_EOL;
+    }
   }
 
   /**
