@@ -23,64 +23,55 @@ class MBC_DigestEmail_User
 
   /**
    * Singleton instance of application configuration settings.
-   *
-   * @var object
+   * @var object $mbConfig
    */
    private $mbConfig;
 
   /**
    * Singleton instance of class used to report usage statistics.
-   *
-   * @var object
+   * @var object $statHat
    */
    private $statHat;
 
   /**
    * A collection of tools used by all of the Message Broker applications.
-   *
-   * @var object
+   * @var object $mbToolbox
    */
    private $mbToolbox;
 
   /**
    * The valid email address of the user.
-   *
-   * @var string
+   * @var string $email
    */
   public $email;
 
   /**
    * The first name of the user. Defaults to "Doer" when value is not set.
-   *
-   * @var string
+   * @var string $firstName
    */
   public $firstName;
 
   /**
-   *
-   *
-   * @var integer
+   * User Drupal UID.
+   * @var integer $drupal_uid
    */
   protected $drupal_uid;
 
   /**
-   *
-   *
-   * @var object
+   * Markup of the link for user unsubscription requeuests
+   * @var object $subscription_link
    */
   public $subscription_link;
 
   /**
-   *
-   *
-   * @var object
+   * The orginal message for reference
+   * @var object $originalPayload
    */
   public $originalPayload;
 
   /**
    * The campaigns the user digest message will contain as active and needing report backs.
-   *
-   * @var array
+   * @var array $campaigns
    */
   public $campaigns = [];
 
@@ -131,14 +122,11 @@ class MBC_DigestEmail_User
   }
 
   /**
+   * Set the user Drupal UID
    *
-   */
-  public function setLanguage() {
-
-  }
-
-  /**
-   *
+   * @todo: Lookup Drupal UID by email if the value is not returned in the user document from
+   * mb-user-api request. May not be necessary when bug in mb-user-api is resolved that results in several
+   * user documents, one of campaign activity while other has user details such as Drupal UID.
    */
   public function setDrupalUID($uid) {
 
@@ -174,7 +162,10 @@ class MBC_DigestEmail_User
   }
 
   /**
+   * getSubsciptionsURL() - Lookup user unsubscription markup. Request link details if an entry
+   * does not already exsit.
    *
+   * @return string
    */
   public function getSubsciptionsURL() {
 
@@ -195,7 +186,12 @@ class MBC_DigestEmail_User
   }
 
   /**
+   * buildSubscriptionsLink() - Create class for user unsubscription link.
    *
+   * @todo: Move to concurent process to build subscription object for persistent storage
+   * via mb-digest-api.
+   *
+   * @return string
    */
   private function buildSubscriptionsLink() {
 
@@ -206,20 +202,58 @@ class MBC_DigestEmail_User
     return $this->subscription_link->url;
   }
 
-  /*
-   * processUserCampaigns(): Order the user campaigns by:
-   *  - is staff pick
-   *    - ordered by user campaign signup
-   *  - non staff pick
-   *    - ordered by user campaign signup
-   *  - limit to maximum 5 campaigns
+  /**
+   * processUserCampaigns(): Filter, sort and limit the user campaigns.
    */
   public function processUserCampaigns() {
+
+    $campaigns = $this->campaigns;
+
+    $campaigns = $this->filterCampaigns($campaigns);
+    $campaigns = $this->sortCampaigns($campaigns);
+    $campaigns = $this->limitCampaigns($campaigns);
+
+    $this->campaigns = $campaigns;
+  }
+
+  /**
+   * Filter campaigns to meet requirments to be included in digest messages.
+   *
+   * @param array $campaigns
+   *   A list of campaigns to apply filters to.
+   *
+   * @return array
+   */
+  private function filterCampaigns($campaigns) {
+
+    $filteredCampaigns = [];
+    foreach ($campaigns as $campaignNID => $campaign) {
+
+      // Include active campaigns
+      if (isset($campaign->status) && $campaign->status == 'active') {
+        $filteredCampaigns[] = $campaign;
+      }
+    }
+    $campaigns = $filteredCampaigns;
+
+    return $campaigns;
+  }
+
+  /**
+   * Order campaigns based on staff pick or regular. Staff Pick first above all regular campaigns.
+   *
+   * @param array $campaigns
+   *   A list of campaigns to process.
+   *
+   * @return array
+   */
+  private function sortCampaigns($campaigns) {
 
     $staffPicks = array();
     $nonStaffPicks = array();
 
-    foreach ($this->campaigns as $campaignNID => $campaign) {
+    foreach ($campaigns as $campaignNID => $campaign) {
+
       if (isset($campaign['settings']->is_staff_pick) && $campaignDetail['settings']->is_staff_pick == TRUE) {
         $staffPicks[$campaignNID] = $campaign;
       }
@@ -251,12 +285,25 @@ class MBC_DigestEmail_User
     // Merge all campaigns, Staff Picks first, Non last.
     $campaigns = $staffPicks + $nonStaffPicks;
 
+    return $campaigns;
+  }
+
+  /**
+   * Filter campaigns based on business rules.
+   *
+   * @param array $campaigns
+   *   A list of campaign objects to filter.
+   *
+   * @return array
+   */
+  private function limitCampaigns($campaigns) {
+
     // Limit the number of campaigns in message to MAX_CAMPAIGNS
     if (count($campaigns) > self::MAX_CAMPAIGNS) {
         $campaigns = array_slice($campaigns, 0, self::MAX_CAMPAIGNS, TRUE);
     }
 
-    $this->campaigns = $campaigns;
+    return $campaigns;
   }
 
 }
