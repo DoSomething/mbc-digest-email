@@ -88,6 +88,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
    */
   public function consumeDigestUserQueue($message) {
 
+    echo '------- mbc-digest-email - MBC_DigestEmail_Consumer->consumeDigestUserQueue() START -------', PHP_EOL;
+
     parent::consumeQueue($message);
     echo PHP_EOL . PHP_EOL;
     echo '** Consuming: ' . $this->message['email'], PHP_EOL;
@@ -115,6 +117,8 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
       $this->messageBroker->sendAck($this->message['payload']);
       echo '- Ack sent: OK', PHP_EOL . PHP_EOL;
+
+      echo '------- mbc-digest-email - MBC_DigestEmail_Consumer->consumeDigestUserQueue() END -------', PHP_EOL;
     }
 
     // Send batch of user digest messages OR
@@ -300,7 +304,7 @@ private function waitingUserMessages() {
    */
   protected function process() {
 
-    $this->mbcDEUser->processUserCampaigns();
+    $this->mbcDEUser->processUserCampaigns($this->campaigns);
     $this->mbcDEUser->getSubsciptionsURL();
     $this->mbcDEMessanger->addUser($this->mbcDEUser);
 
