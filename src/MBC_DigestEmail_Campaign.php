@@ -189,7 +189,7 @@ class MBC_DigestEmail_Campaign {
       echo '- MBC_DigestEmail_Campaign->add(): Campaign ' . $nid . ' (' . $this->title . ') DO IT: During Tip Copy, step_pre[0]->copy not set.', PHP_EOL;
     }
 
-    // Optional
+    // Optionals
     // is_staff_pick
     if (isset($campaignSettings->is_staff_pick)) {
       $this->is_staff_pick = $campaignSettings->is_staff_pick;
@@ -197,6 +197,10 @@ class MBC_DigestEmail_Campaign {
     // latest_news_copy - replaces Tip copy if set.
     if (isset($campaignSettings->latest_news_copy)) {
       $this->latest_news = trim(strip_tags($campaignSettings->latest_news_copy));
+    }
+    // Status
+    if (isset($campaignSettings->status)) {
+      $this->status = $campaignSettings->status;
     }
   }
 
