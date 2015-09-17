@@ -305,10 +305,14 @@ private function waitingUserMessages() {
   protected function process() {
 
     $this->mbcDEUser->processUserCampaigns($this->campaigns);
-    $this->mbcDEUser->getSubsciptionsURL();
-    $this->mbcDEMessanger->addUser($this->mbcDEUser);
 
-    // Cleanup for processing of next message
+    // Skip user objects that end up with no campaigns
+    if (count($this->mbcDEUser->campaigns) > 0) {
+      $this->mbcDEUser->getSubsciptionsURL();
+      $this->mbcDEMessanger->addUser($this->mbcDEUser);
+    }
+
+    // Cleanup for processing of next user digest settings
     unset($this->mbcDEUser);
   }
 
