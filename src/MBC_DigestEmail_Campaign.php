@@ -196,7 +196,7 @@ class MBC_DigestEmail_Campaign {
     }
     // latest_news_copy - replaces Tip copy if set.
     if (isset($campaignSettings->latest_news_copy)) {
-      $this->latest_news = trim(strip_tags($campaignSettings->latest_news_copy));
+      $this->latest_news = trim($campaignSettings->latest_news_copy);
     }
     // Status
     if (isset($campaignSettings->status)) {
