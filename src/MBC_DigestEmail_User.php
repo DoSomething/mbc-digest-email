@@ -248,6 +248,9 @@ class MBC_DigestEmail_User
     $filteredUserCampaigns = [];
     foreach ($userCampaigns as $userCampaignNID => $userCampaign) {
 
+      // @todo: Prevent users seeing a campaign in their digest more than five times. Exclude campaigns
+      // that the user has signed up for over five weeks in the past.
+
       // Include active campaigns
       if (isset($campaigns[$userCampaignNID]->status) && $campaigns[$userCampaignNID]->status == 'active') {
         $filteredUserCampaigns[$userCampaignNID] = $userCampaign;
