@@ -67,7 +67,7 @@ $mbConfig->setProperty('statHat', new StatHat([
 
 $mbConfig->setProperty('mbToolbox', new MB_Toolbox());
 $mbConfig->setProperty('mbToolboxcURL', new MB_Toolbox_cURL());
-$mbConfig->setProperty('mbcDEMessanger', new MBC_DigestEmail_MandrillMessenger());
+$mbConfig->setProperty('mbcDEMessenger', new MBC_DigestEmail_MandrillMessenger());
 
 $mbConfig->setProperty('mbRabbitMQManagementAPI', new MB_RabbitMQManagementAPI([
   'domain' => getenv("MB_RABBITMQ_MANAGEMENT_API_HOST"),
