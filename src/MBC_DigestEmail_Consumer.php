@@ -27,6 +27,12 @@ use \Exception;
 class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
   /**
+   * The number of email addresses to send in a batch submission to MailChimp.
+   * @var array $batchSize
+   */
+  private $batchSize;
+
+  /**
    * A list of user objects.
    * @var array $users
    */
@@ -47,9 +53,9 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   /**
    * A Messenger object. Handles combining User and Campain objects to compose a batch of digest
    * messages. The messages are sent in batches using a Service object (Mandrill).
-   * @var object $mbcDEMessanger
+   * @var object $mbcDEMessenger
    */
-  private $mbcDEMessanger;
+  private $mbcDEMessenger;
 
   /**
    * Collect errors reported when generating campaign object. The contents of this property will be
@@ -69,14 +75,14 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     parent::__construct();
 
     // Future support of different Services other than Mandrill could be toggled. Currently the Mandrill
-    // service is hard coded.at There's not reason more than one service could be used at the same time
-    // depending on the affiliates arrangements. Use of the differet Service classes could be toggled with
+    // service is hard coded. There's no reason more than one service could be used at the same time
+    // depending on the affiliates arrangements. Use of the different Service classes could be toggled with
     // logic for user origin.
 
     // See mbc-registration-mobile for working example of toggling based on user origin.
 
     $this->mbConfig = MB_Configuration::getInstance();
-    $this->mbcDEMessanger = $this->mbConfig->getProperty('mbcDEMessanger');
+    $this->mbcDEMessenger = $this->mbConfig->getProperty('mbcDEMessenger');
   }
 
   /**
@@ -137,7 +143,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       echo '%% sending email batch', PHP_EOL . PHP_EOL;
 
       // @todo: Support different services based on interface base class
-      $status = $this->mbcDEMessanger->sendDigestBatch();
+      $status = $this->mbcDEMessenger->sendDigestBatch();
 
       // @todo: Log digest message activity, include errors encountered generating campaign
       // objects: $this->campaignErrors
@@ -233,7 +239,7 @@ private function waitingUserMessages() {
 
       // Exclude campaings that are not functional Campaign objects.
       if (is_object($mbcDECampaign)) {
-        $this->mbcDEMessanger->addCampaign($mbcDECampaign);
+        $this->mbcDEMessenger->addCampaign($mbcDECampaign);
         $this->mbcDEUser->addCampaign($campaign['nid'], $campaign['signup']);
       }
     }
@@ -309,7 +315,7 @@ private function waitingUserMessages() {
     // Skip user objects that end up with no campaigns
     if (count($this->mbcDEUser->campaigns) > 0) {
       $this->mbcDEUser->getSubsciptionsURL();
-      $this->mbcDEMessanger->addUser($this->mbcDEUser);
+      $this->mbcDEMessenger->addUser($this->mbcDEUser);
     }
 
     // Cleanup for processing of next user digest settings
