@@ -4,10 +4,10 @@
  */
 
 use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
 use DoSomething\MB_Toolbox\MB_Toolbox_cURL;
 use DoSomething\MB_Toolbox\MB_RabbitMQManagementAPI;
+use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MBC_DigestEmail\MBC_DigestEmail_MandrillMessenger;
 
 // Load configuration settings common to the Message Broker system
