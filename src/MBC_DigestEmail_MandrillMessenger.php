@@ -142,23 +142,30 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     // Check for existing markup
     if (!(isset($this->campaigns[$campaign->drupal_nid]->markup))) {
 
-      $campaignMarkup = $this->campaignTempate;
-
-      $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign->image_campaign_cover, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
-
-      if (isset($campaign->latest_news)) {
-        $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team: ', $campaignMarkup);
-        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->latest_news, $campaignMarkup);
+      if ($markup = $this->campaignCacheMarkupLookup($campaign->drupal_nid)) {
+        $this->campaigns[$campaign->drupal_nid]->markup = markup;
       }
       else {
-        $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign->during_tip_header, $campaignMarkup);
-        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->during_tip_copy, $campaignMarkup);
-      }
 
-      $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
+        $campaignMarkup = $this->campaignTempate;
+
+        $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign->image_campaign_cover, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
+
+        if (isset($campaign->latest_news)) {
+          $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team: ', $campaignMarkup);
+          $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->latest_news, $campaignMarkup);
+        }
+        else {
+          $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign->during_tip_header, $campaignMarkup);
+          $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->during_tip_copy, $campaignMarkup);
+        }
+
+        $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
+        $this->cacheCampaignMarkup($campaign->drupal_nid, $campaignMarkup);
+      }
     }
   }
 
@@ -493,5 +500,18 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     }
     echo 'mandrillResults: ' . print_r($stats, TRUE), PHP_EOL . PHP_EOL;
     unset($this->users);
+  }
+
+  /**
+   * cacheCampaignMarkup: Send campaign markup to mb-digest-api for caching.
+   *
+   * @param integer $nid
+   *   The Drupal defined Node ID (nid) of the campaign object in the
+   *   Drupal application.
+   * @param string $markup
+   *   HTML markup of the campaign used to generate email message content.
+   */
+  protected function cacheCampaignMarkup($nid, $markup) {
+
   }
 }
