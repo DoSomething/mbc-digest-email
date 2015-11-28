@@ -205,7 +205,8 @@ class MBC_DigestEmail_Campaign {
   }
 
   /**
-   * Gather campaign properties based on the campaign lookup on the Drupal site.
+   * Gather campaign properties from either the Drupal site or cached setting in
+   * the ds-digest-api.
    *
    * @param integer $nid
    *   The Drupal nid (node ID) of the target campaign.
@@ -215,6 +216,57 @@ class MBC_DigestEmail_Campaign {
    *   Return boolean FALSE if request is unsuccessful.
    */
   private function gatherSettings($nid) {
+
+    // Check for entry in mb-digest-api
+    if ($this->cachedCampaign($nid)) {
+      $campaignObject = $this->gatherCampaignCached($nid);
+    }
+    else {
+      $campaignObject = $this->gatherCampaignDrupal($nid);
+      $this->setCampaignCache($campaignObject);
+    }
+    return $campaignObject;
+  }
+
+  /**
+   * gatherCampaignCached: Gather cached campaign object from mb-digest-api.
+   *
+   * @param integer $nid
+   *   The Node ID (nid) of the campaign as defined by the Drupal application.
+   */
+  private function gatherCampaignCached($nid) {
+
+    $mbDigestAPIConfig = $this->mbConfig->getProperty('mb_digest_api_config');
+    $curlUrl = $mbDigestAPIConfig['host'];
+    $port = isset($mbDigestAPIConfig['port']) ? $mbDigestAPIConfig['port'] : NULL;
+    if ($port != 0 && is_numeric($port)) {
+      $curlUrl .= ':' . (int) $port;
+    }
+
+    $mbDigestAPIUrl = $curlUrl . '/api/v1/campaign/' . $nid;
+    $result = $this->mbToolboxcURL->curlGET($mbDigestAPIUrl);
+
+    // Exclude campaigns that don't have details in Drupal API or "Access
+    // denied" due to campaign no longer published
+    if ($result[1] == 200 && is_object($result[0])) {
+      return $result[0];
+    }
+    elseif ($result[1] != 200) {
+      throw new Exception('Call to ' . $mbDigestAPIUrl . ' returned ' . $result[1] . ' response.');
+    }
+  }
+
+  /**
+   * Gather campaign properties based on the campaign lookup on the Drupal site.
+   *
+   * @param integer $nid
+   *   The Node ID (nid) of the campaign as defined by the Drupal application.
+   *
+   * @return object
+   *   The returned results from the call to the campaign endpoint on the Drupal site.
+   *   Return boolean FALSE if request is unsuccessful.
+   */
+  private function gatherCampaignDrupal($nid) {
 
     $dsDrupalAPIConfig = $this->mbConfig->getProperty('ds_drupal_api_config');
     $curlUrl = $dsDrupalAPIConfig['host'];
@@ -240,5 +292,16 @@ class MBC_DigestEmail_Campaign {
     else {
       throw new Exception('Unable to call ' . $campaignAPIUrl . ' to get Campaign object: ' . $nid);
     }
+  }
+
+  /**
+   * setCampaignCache: Send campaign object to mb-digest-api for caching.
+   *
+   * @param object $campaignObject
+   *   The gathered campaign object that will be used to generate and store
+   *   cached campaign data.
+   */
+  private function setCampaignCache($campaignObject) {
+
   }
 }
