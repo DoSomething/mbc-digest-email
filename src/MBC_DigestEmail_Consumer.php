@@ -58,13 +58,6 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   private $mbcDEMessenger;
 
   /**
-   * Collect errors reported when generating campaign object. The contents of this property will be
-   * used to generate a report of campaigns missing content.
-   * @var array $campaignErrors
-   */
-  private $campaignErrors;
-
-  /**
    * __construct(): When a new Consumer class is created at the time of starting the mbc-digest-script
    * this method will ensure key variables are constructed.
    */
@@ -145,11 +138,6 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessenger->sendDigestBatch();
 
-      // @todo: Log digest message activity, include errors encountered generating campaign
-      // objects: $this->campaignErrors
-      //
-      // $this->logStatus();
-
       echo '- unset $this->users: ' . count($this->users), PHP_EOL . PHP_EOL;
       unset($this->users);
     }
@@ -228,16 +216,13 @@ private function waitingUserMessages() {
         // Add campaign object to concerned properties and related objects.
         $this->campaigns[$campaign['nid']] = $mbcDECampaign;
 
-        if (isset($mbcDECampaign->campaignErrors) && count($mbcDECampaign->campaignErrors) > 0) {
-          $this->campaignErrors[$campaign['nid']] = $mbcDECampaign->campaignErrors;
-        }
       }
       else {
         echo '- Campaign ($this->campaigns[]) record nid: ' . $campaign['nid'] . ' already exists.', PHP_EOL;
         $mbcDECampaign = $this->campaigns[$campaign['nid']];
       }
 
-      // Exclude campaings that are not functional Campaign objects.
+      // Exclude campaigns that are not functional Campaign objects (error was returned).
       if (is_object($mbcDECampaign)) {
         $this->mbcDEMessenger->addCampaign($mbcDECampaign);
         $this->mbcDEUser->addCampaign($campaign['nid'], $campaign['signup']);
@@ -321,5 +306,4 @@ private function waitingUserMessages() {
     // Cleanup for processing of next user digest settings
     unset($this->mbcDEUser);
   }
-
 }
