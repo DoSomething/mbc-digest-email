@@ -303,5 +303,27 @@ class MBC_DigestEmail_Campaign {
    */
   private function setCampaignCache($campaignObject) {
 
+    $mbDigestAPIConfig = $this->mbConfig->getProperty('mb_digest_api_config');
+    $curlUrl = $mbDigestAPIConfig['host'];
+    $port = isset($mbDigestAPIConfig['port']) ? $mbDigestAPIConfig['port'] : NULL;
+    if ($port != 0 && is_numeric($port)) {
+      $curlUrl .= ':' . (int) $port;
+    }
+
+    $post = [
+      'nid' => $campaignObject->nid,
+      'language' => $campaignObject->language,
+      'object' => seralize($campaignObject)
+    ];
+
+    $mbDigestAPIUrl = $curlUrl . '/api/v1/campaign';
+    $result = $this->mbToolboxcURL->curlPOST($mbDigestAPIUrl, $post);
+
+    if ($result[1] == 200) {
+      // $this->statHat->ezCount('', 1);
+    }
+    else {
+      throw new Exception('- ERROR, MBC_DigestEmail_Campaign->setCampaignCache(): Failed to POST to ' . $mbDigestAPIUrl . ' Returned POST results: ' . print_r($result, TRUE));
+    }
   }
 }
