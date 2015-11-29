@@ -7,8 +7,6 @@
 namespace DoSomething\MBC_DigestEmail;
 
 use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_Toolbox;
 
 /**
  * MBC_DigestEmail_MandrillMessenger class - 
@@ -73,6 +71,12 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   private $mandrill;
 
   /**
+   * A collection of methods for interaction with the mb-digest-api.
+   * @var object $mandrill
+   */
+  private $mbcDigestEmailAPI;
+
+  /**
    * Common settings between all of the digest messages that will be merged into the template to help
    * compose the user message.
    * @var array $globalMergeVars
@@ -91,6 +95,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
     $this->mandrill = $this->mbConfig->getProperty('mandrill');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
 
     // Resources for building digest batch
     $this->userIndex = 0;
@@ -139,26 +144,37 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private function generateCampaignMarkup($campaign) {
 
-    // Check for existing markup
+    // Check for existing markup in existing campaign objects in class
     if (!(isset($this->campaigns[$campaign->drupal_nid]->markup))) {
 
-      $campaignMarkup = $this->campaignTempate;
-
-      $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign->image_campaign_cover, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
-      $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
-
-      if (isset($campaign->latest_news)) {
-        $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team: ', $campaignMarkup);
-        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->latest_news, $campaignMarkup);
+      // Lookup the cached campaign object in mb-digest-api
+      if ($cachedCampaign = $this->mbcDigestEmailAPI->campaignGet($campaign)) {
+        $this->campaigns[$campaign->drupal_nid]->markup = $cachedCampaign->markup;
       }
       else {
-        $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign->during_tip_header, $campaignMarkup);
-        $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->during_tip_copy, $campaignMarkup);
-      }
 
-      $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
+        $campaignMarkup = $this->campaignTempate;
+
+        $campaignMarkup = str_replace('*|CAMPAIGN_IMAGE_URL|*', $campaign->image_campaign_cover, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CAMPAIGN_TITLE|*', $campaign->title, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CAMPAIGN_LINK|*', $campaign->url, $campaignMarkup);
+        $campaignMarkup = str_replace('*|CALL_TO_ACTION|*', $campaign->call_to_action, $campaignMarkup);
+
+        if (isset($campaign->latest_news)) {
+          $campaignMarkup = str_replace('*|TIP_TITLE|*',  'News from the team: ', $campaignMarkup);
+          $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->latest_news, $campaignMarkup);
+        }
+        else {
+          $campaignMarkup = str_replace('*|TIP_TITLE|*',  $campaign->during_tip_header, $campaignMarkup);
+          $campaignMarkup = str_replace('*|DURING_TIP|*',  $campaign->during_tip_copy, $campaignMarkup);
+        }
+
+        $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
+
+        // Add campaign object that includes the markup property to cached
+        // campaign entry in mb-digest-api
+        $this->mbcDigestEmailAPI->campaignSet($this->campaigns[$campaign->drupal_nid]);
+      }
     }
   }
 

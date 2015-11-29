@@ -58,11 +58,10 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   private $mbcDEMessenger;
 
   /**
-   * Collect errors reported when generating campaign object. The contents of this property will be
-   * used to generate a report of campaigns missing content.
-   * @var array $campaignErrors
+   * A collection of methods to interact with the mb-digest-api.
+   * @var object $mbcDigestEmailAPI
    */
-  private $campaignErrors;
+  private $mbcDigestEmailAPI;
 
   /**
    * __construct(): When a new Consumer class is created at the time of starting the mbc-digest-script
@@ -83,6 +82,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->mbcDEMessenger = $this->mbConfig->getProperty('mbcDEMessenger');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
   }
 
   /**
@@ -144,11 +144,6 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
       // @todo: Support different services based on interface base class
       $status = $this->mbcDEMessenger->sendDigestBatch();
-
-      // @todo: Log digest message activity, include errors encountered generating campaign
-      // objects: $this->campaignErrors
-      //
-      // $this->logStatus();
 
       echo '- unset $this->users: ' . count($this->users), PHP_EOL . PHP_EOL;
       unset($this->users);
@@ -218,26 +213,24 @@ private function waitingUserMessages() {
           $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
         }
         catch (Exception $e) {
-          // @todo: Log/report missing campaign value.
           echo '- MBC_DigestEmail_Consumer->setter(): Error creating MBC_DigestEmail_Campaign object: ' . $e->getMessage(), PHP_EOL;
           $mbcDECampaign = [
             'nid' => $campaign['nid'],
             'creationError' => $e->getMessage(),
           ];
+          // Cache campaign errors for report generation
+          $this->mbcDigestEmailAPI->campaignSet($mbcDECampaign);
         }
         // Add campaign object to concerned properties and related objects.
         $this->campaigns[$campaign['nid']] = $mbcDECampaign;
 
-        if (isset($mbcDECampaign->campaignErrors) && count($mbcDECampaign->campaignErrors) > 0) {
-          $this->campaignErrors[$campaign['nid']] = $mbcDECampaign->campaignErrors;
-        }
       }
       else {
         echo '- Campaign ($this->campaigns[]) record nid: ' . $campaign['nid'] . ' already exists.', PHP_EOL;
         $mbcDECampaign = $this->campaigns[$campaign['nid']];
       }
 
-      // Exclude campaings that are not functional Campaign objects.
+      // Exclude campaigns that are not functional Campaign objects (error was returned).
       if (is_object($mbcDECampaign)) {
         $this->mbcDEMessenger->addCampaign($mbcDECampaign);
         $this->mbcDEUser->addCampaign($campaign['nid'], $campaign['signup']);
@@ -321,5 +314,4 @@ private function waitingUserMessages() {
     // Cleanup for processing of next user digest settings
     unset($this->mbcDEUser);
   }
-
 }

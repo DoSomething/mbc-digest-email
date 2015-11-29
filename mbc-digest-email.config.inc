@@ -40,6 +40,10 @@ $mbConfig->setProperty('mb_user_api_config', [
   'host' => getenv("MB_USER_API_HOST"),
   'port' => getenv('MB_USER_API_PORT')
 ]);
+$mbConfig->setProperty('mb_digest_api_config', [
+  'host' => getenv("MB_DIGEST_API_HOST"),
+  'port' => getenv('MB_DIGEST_API_PORT')
+]);
 
 $subscriptionsSetting = $mbConfig->gatherSettings('subscriptions');
 $mbConfig->setProperty('subscriptions_config', [

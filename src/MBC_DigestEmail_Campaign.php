@@ -6,8 +6,6 @@
 namespace DoSomething\MBC_DigestEmail;
 
 use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_Toolbox;
 use \Exception;
 
 /**
@@ -121,14 +119,17 @@ class MBC_DigestEmail_Campaign {
    *
    * @param integer $nid
    *   nid (Drupal node ID) of the campaign content item.
+   * @param string $language
+   *   The language of the campaign as defined by the Drupal application.
    */
-  public function __construct($nid) {
+  public function __construct($nid, $language) {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
 
-    $this->add($nid);
+    $this->add($nid, $language);
   }
 
   /**
@@ -137,10 +138,12 @@ class MBC_DigestEmail_Campaign {
    * @param integer $nid
    *   The node ID (nid), a unique identifier for the content defined by the Drupal website.
    *   A campaign has a unique nid.
+   * @param string $language
+   *   The language of the campaign as defined by the Drupal application.
    */
   private function add($nid) {
 
-    $campaignSettings = $this->gatherSettings($nid);
+    $campaignSettings = $this->gatherSettings($nid, $language);
 
     $this->drupal_nid = $campaignSettings->nid;
     $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '?utm_source=dosomething&utm_medium=email&utm_campaign=digest#prove';
@@ -205,16 +208,40 @@ class MBC_DigestEmail_Campaign {
   }
 
   /**
-   * Gather campaign properties based on the campaign lookup on the Drupal site.
+   * Gather campaign properties from either the Drupal site or cached setting in
+   * the ds-digest-api.
    *
    * @param integer $nid
    *   The Drupal nid (node ID) of the target campaign.
+   * @param string $language
+   *   The language of the desired campaign. A campaign (by NID) can have more
+   *   than one language version.
+   *
+   * @return object
+   *   The returned campaign object. Source can be fresh copy from Drupal site or
+   *   cached version from mb-digest-api.
+   *   Return boolean FALSE if request is unsuccessful.
+   */
+  private function gatherSettings($nid, $language) {
+
+    // Check for entry in mb-digest-api
+    if (!($campaignObject = $this->mbcDigestEmailAPI->campaignGet($nid, $language))) {
+      $campaignObject = $this->gatherCampaignDrupal($nid);
+    }
+    return $campaignObject;
+  }
+
+  /**
+   * Gather campaign properties based on the campaign lookup on the Drupal site.
+   *
+   * @param integer $nid
+   *   The Node ID (nid) of the campaign as defined by the Drupal application.
    *
    * @return object
    *   The returned results from the call to the campaign endpoint on the Drupal site.
    *   Return boolean FALSE if request is unsuccessful.
    */
-  private function gatherSettings($nid) {
+  private function gatherCampaignDrupal($nid) {
 
     $dsDrupalAPIConfig = $this->mbConfig->getProperty('ds_drupal_api_config');
     $curlUrl = $dsDrupalAPIConfig['host'];
