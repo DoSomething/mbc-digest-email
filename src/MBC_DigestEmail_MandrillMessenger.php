@@ -7,8 +7,6 @@
 namespace DoSomething\MBC_DigestEmail;
 
 use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_Toolbox;
 
 /**
  * MBC_DigestEmail_MandrillMessenger class - 
@@ -73,6 +71,12 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   private $mandrill;
 
   /**
+   * A collection of methods for interaction with the mb-digest-api.
+   * @var object $mandrill
+   */
+  private $mbcDigestEmailAPI;
+
+  /**
    * Common settings between all of the digest messages that will be merged into the template to help
    * compose the user message.
    * @var array $globalMergeVars
@@ -91,6 +95,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolbox = $this->mbConfig->getProperty('mbToolbox');
     $this->mandrill = $this->mbConfig->getProperty('mandrill');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
 
     // Resources for building digest batch
     $this->userIndex = 0;
@@ -142,8 +147,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     // Check for existing markup
     if (!(isset($this->campaigns[$campaign->drupal_nid]->markup))) {
 
-      if ($markup = $this->campaignCacheMarkupLookup($campaign->drupal_nid)) {
-        $this->campaigns[$campaign->drupal_nid]->markup = markup;
+      if ($markup = parent::cacheCampaignLookup($campaign)) {
+        $this->campaigns[$campaign->drupal_nid]->markup = $markup;
       }
       else {
 
@@ -164,7 +169,9 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
         }
 
         $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
-        $this->cacheCampaignMarkup($campaign->drupal_nid, $campaign->language, $campaignMarkup);
+
+        // Add markup property to cached campaign
+        $this->mbcDigestEmailAPI->campaignSet($campaign);
       }
     }
   }
@@ -500,40 +507,5 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
     }
     echo 'mandrillResults: ' . print_r($stats, TRUE), PHP_EOL . PHP_EOL;
     unset($this->users);
-  }
-
-  /**
-   * cacheCampaignMarkup: POST campaign markup to mb-digest-api for caching.
-   *
-   * @param integer $nid
-   *   The Drupal defined Node ID (nid) of the campaign object in the
-   *   Drupal application.
-   * @param string $markup
-   *   HTML markup of the campaign used to generate email message content.
-   */
-  protected function cacheCampaignMarkup($nid, $language, $markup) {
-
-    $mbDigestAPIConfig = $this->mbConfig->getProperty('mb_digest_api_config');
-    $curlUrl = $mbDigestAPIConfig['host'];
-    $port = isset($mbDigestAPIConfig['port']) ? $mbDigestAPIConfig['port'] : NULL;
-    if ($port != 0 && is_numeric($port)) {
-      $curlUrl .= ':' . (int) $port;
-    }
-
-    $post = [
-      'nid' => $nid,
-      'language' => $language,
-      'markup' => $markup
-    ];
-
-    $mbDigestAPIUrl = $curlUrl . '/api/v1/campaign';
-    $result = $this->mbToolboxcURL->curlPOST($mbDigestAPIUrl, $post);
-
-    if ($result[1] == 200) {
-      // $this->statHat->ezCount('', 1);
-    }
-    else {
-      throw new Exception('- ERROR, MBC_DigestEmail_MandrillMessenger->cacheCampaignMarku(): Failed to POST to ' . $mbDigestAPIUrl . ' Returned POST results: ' . print_r($result, TRUE));
-    }
   }
 }
