@@ -6,8 +6,6 @@
 namespace DoSomething\MBC_DigestEmail;
 
 use DoSomething\MB_Toolbox\MB_Configuration;
-use DoSomething\StatHat\Client as StatHat;
-use DoSomething\MB_Toolbox\MB_Toolbox;
 use \Exception;
 
 /**
@@ -121,14 +119,17 @@ class MBC_DigestEmail_Campaign {
    *
    * @param integer $nid
    *   nid (Drupal node ID) of the campaign content item.
+   * @param string $language
+   *   The language of the campaign as defined by the Drupal application.
    */
-  public function __construct($nid) {
+  public function __construct($nid, $language) {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->statHat = $this->mbConfig->getProperty('statHat');
     $this->mbToolboxcURL = $this->mbConfig->getProperty('mbToolboxcURL');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
 
-    $this->add($nid);
+    $this->add($nid, $language);
   }
 
   /**
@@ -137,10 +138,12 @@ class MBC_DigestEmail_Campaign {
    * @param integer $nid
    *   The node ID (nid), a unique identifier for the content defined by the Drupal website.
    *   A campaign has a unique nid.
+   * @param string $language
+   *   The language of the campaign as defined by the Drupal application.
    */
   private function add($nid) {
 
-    $campaignSettings = $this->gatherSettings($nid);
+    $campaignSettings = $this->gatherSettings($nid, $language);
 
     $this->drupal_nid = $campaignSettings->nid;
     $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '?utm_source=dosomething&utm_medium=email&utm_campaign=digest#prove';
@@ -210,50 +213,22 @@ class MBC_DigestEmail_Campaign {
    *
    * @param integer $nid
    *   The Drupal nid (node ID) of the target campaign.
+   * @param string $language
+   *   The language of the desired campaign. A campaign (by NID) can have more
+   *   than one language version.
    *
    * @return object
-   *   The returned results from the call to the campaign endpoint on the Drupal site.
+   *   The returned campaign object. Source can be fresh copy from Drupal site or
+   *   cached version from mb-digest-api.
    *   Return boolean FALSE if request is unsuccessful.
    */
-  private function gatherSettings($nid) {
+  private function gatherSettings($nid, $language) {
 
     // Check for entry in mb-digest-api
-    if ($this->cachedCampaign($nid)) {
-      $campaignObject = $this->gatherCampaignCached($nid);
-    }
-    else {
+    if (!($campaignObject = $this->mbcDigestEmailAPI->campaignGet($nid, $language))) {
       $campaignObject = $this->gatherCampaignDrupal($nid);
-      $this->setCampaignCache($campaignObject);
     }
     return $campaignObject;
-  }
-
-  /**
-   * gatherCampaignCached: Gather cached campaign object from mb-digest-api.
-   *
-   * @param integer $nid
-   *   The Node ID (nid) of the campaign as defined by the Drupal application.
-   */
-  private function gatherCampaignCached($nid) {
-
-    $mbDigestAPIConfig = $this->mbConfig->getProperty('mb_digest_api_config');
-    $curlUrl = $mbDigestAPIConfig['host'];
-    $port = isset($mbDigestAPIConfig['port']) ? $mbDigestAPIConfig['port'] : NULL;
-    if ($port != 0 && is_numeric($port)) {
-      $curlUrl .= ':' . (int) $port;
-    }
-
-    $mbDigestAPIUrl = $curlUrl . '/api/v1/campaign/' . $nid;
-    $result = $this->mbToolboxcURL->curlGET($mbDigestAPIUrl);
-
-    // Exclude campaigns that don't have details in Drupal API or "Access
-    // denied" due to campaign no longer published
-    if ($result[1] == 200 && is_object($result[0])) {
-      return $result[0];
-    }
-    elseif ($result[1] != 200) {
-      throw new Exception('Call to ' . $mbDigestAPIUrl . ' returned ' . $result[1] . ' response.');
-    }
   }
 
   /**
@@ -291,39 +266,6 @@ class MBC_DigestEmail_Campaign {
     }
     else {
       throw new Exception('Unable to call ' . $campaignAPIUrl . ' to get Campaign object: ' . $nid);
-    }
-  }
-
-  /**
-   * setCampaignCache: Send campaign object to mb-digest-api for caching.
-   *
-   * @param object $campaignObject
-   *   The gathered campaign object that will be used to generate and store
-   *   cached campaign data.
-   */
-  private function setCampaignCache($campaignObject) {
-
-    $mbDigestAPIConfig = $this->mbConfig->getProperty('mb_digest_api_config');
-    $curlUrl = $mbDigestAPIConfig['host'];
-    $port = isset($mbDigestAPIConfig['port']) ? $mbDigestAPIConfig['port'] : NULL;
-    if ($port != 0 && is_numeric($port)) {
-      $curlUrl .= ':' . (int) $port;
-    }
-
-    $post = [
-      'nid' => $campaignObject->nid,
-      'language' => $campaignObject->language,
-      'object' => seralize($campaignObject)
-    ];
-
-    $mbDigestAPIUrl = $curlUrl . '/api/v1/campaign';
-    $result = $this->mbToolboxcURL->curlPOST($mbDigestAPIUrl, $post);
-
-    if ($result[1] == 200) {
-      // $this->statHat->ezCount('', 1);
-    }
-    else {
-      throw new Exception('- ERROR, MBC_DigestEmail_Campaign->setCampaignCache(): Failed to POST to ' . $mbDigestAPIUrl . ' Returned POST results: ' . print_r($result, TRUE));
     }
   }
 }
