@@ -144,11 +144,12 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
    */
   private function generateCampaignMarkup($campaign) {
 
-    // Check for existing markup
+    // Check for existing markup in existing campaign objects in class
     if (!(isset($this->campaigns[$campaign->drupal_nid]->markup))) {
 
-      if ($markup = parent::cacheCampaignLookup($campaign)) {
-        $this->campaigns[$campaign->drupal_nid]->markup = $markup;
+      // Lookup the cached campaign object in mb-digest-api
+      if ($cachedCampaign = $this->mbcDigestEmailAPI->campaignGet($campaign)) {
+        $this->campaigns[$campaign->drupal_nid]->markup = $cachedCampaign->markup;
       }
       else {
 
@@ -170,8 +171,9 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
         $this->campaigns[$campaign->drupal_nid]->markup = $campaignMarkup;
 
-        // Add markup property to cached campaign
-        $this->mbcDigestEmailAPI->campaignSet($campaign);
+        // Add campaign object that includes the markup property to cached
+        // campaign entry in mb-digest-api
+        $this->mbcDigestEmailAPI->campaignSet($this->campaigns[$campaign->drupal_nid]);
       }
     }
   }
