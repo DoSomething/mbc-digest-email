@@ -58,6 +58,12 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
   private $mbcDEMessenger;
 
   /**
+   * A collection of methods to interact with the mb-digest-api.
+   * @var object $mbcDigestEmailAPI
+   */
+  private $mbcDigestEmailAPI;
+
+  /**
    * __construct(): When a new Consumer class is created at the time of starting the mbc-digest-script
    * this method will ensure key variables are constructed.
    */
@@ -76,6 +82,7 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
 
     $this->mbConfig = MB_Configuration::getInstance();
     $this->mbcDEMessenger = $this->mbConfig->getProperty('mbcDEMessenger');
+    $this->mbcDigestEmailAPI = $this->mbConfig->getProperty('mbcDigestEmailAPI');
   }
 
   /**
@@ -206,12 +213,13 @@ private function waitingUserMessages() {
           $mbcDECampaign = new MBC_DigestEmail_Campaign($campaign['nid']);
         }
         catch (Exception $e) {
-          // @todo: Log/report missing campaign value.
           echo '- MBC_DigestEmail_Consumer->setter(): Error creating MBC_DigestEmail_Campaign object: ' . $e->getMessage(), PHP_EOL;
           $mbcDECampaign = [
             'nid' => $campaign['nid'],
             'creationError' => $e->getMessage(),
           ];
+          // Cache campaign errors for report generation
+          $this->mbcDigestEmailAPI->campaignSet($mbcDECampaign);
         }
         // Add campaign object to concerned properties and related objects.
         $this->campaigns[$campaign['nid']] = $mbcDECampaign;
