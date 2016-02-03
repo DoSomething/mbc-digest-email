@@ -9,6 +9,7 @@ namespace DoSomething\MBC_DigestEmail;
 use DoSomething\MB_Toolbox\MB_Configuration;
 use DoSomething\StatHat\Client as StatHat;
 use DoSomething\MB_Toolbox\MB_Toolbox;
+use \Exception;
 
 /**
  * MBC_DigestEmail_MandrillMessenger class - 
