@@ -5,6 +5,7 @@
  */
 
 namespace DoSomething\MBC_DigestEmail;
+use \Exception;
 
 
 /**
