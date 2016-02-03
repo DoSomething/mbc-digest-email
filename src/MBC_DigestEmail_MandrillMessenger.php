@@ -68,7 +68,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
   /**
    * A collection of methods and properties for submissions to the Mandrill API.
-   * @var object $mandrill
+   * @var Mandrill $mandrill
    */
   private $mandrill;
 
@@ -441,6 +441,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $userMergeVars,
       'tags' => $tags,
+      'google_analytics_domains' => ['www.dosomething.org', 'dosomething.org'],
+      'google_analytics_campaign' => 'mbc-digest-email'
     );
 
     return $composedDigestSubmission ;
