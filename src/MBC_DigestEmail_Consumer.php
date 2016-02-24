@@ -185,19 +185,13 @@ private function waitingUserMessages() {
     $this->mbcDEUser = new MBC_DigestEmail_User($userProperty['email']);
 
     // First name
-    $this->mbcDEUser->setFirstName($userProperty['first_name']);
+    $this->mbcDEUser->setFirstName($userProperty);
 
     // Language preference
-    if (!(isset($userProperty['source']))) {
-      $userProperty['source'] = 'US';
-    }
-    $this->mbcDEUser->setLanguage($userProperty['source']);
+    $this->mbcDEUser->setLanguage($userProperty);
 
     // Drupal UID
-    if (!(isset($userProperty['drupal_uid']))) {
-      $userProperty['drupal_uid'] = '';
-    }
-    $this->mbcDEUser->setDrupalUID($userProperty['drupal_uid']);
+    $this->mbcDEUser->setDrupalUID($userProperty);
 
     // List of campaign ids
     echo 'setter() campaigns: ' . count($userProperty['campaigns']), PHP_EOL;
