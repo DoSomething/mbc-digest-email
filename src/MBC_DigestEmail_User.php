@@ -112,7 +112,7 @@ class MBC_DigestEmail_User
       $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
     }
     else {
-      $this->firstName = $userProperty['first_name'];
+      $this->firstName = ucfirst($userProperty['first_name']);
     }
   }
 
