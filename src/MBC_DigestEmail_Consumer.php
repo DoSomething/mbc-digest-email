@@ -185,9 +185,6 @@ private function waitingUserMessages() {
     $this->mbcDEUser = new MBC_DigestEmail_User($userProperty['email']);
 
     // First name
-    if (!(isset($userProperty['first_name']))) {
-      $userProperty['first_name'] = '';
-    }
     $this->mbcDEUser->setFirstName($userProperty['first_name']);
 
     // Language preference
