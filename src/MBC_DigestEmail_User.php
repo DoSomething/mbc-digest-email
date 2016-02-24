@@ -101,26 +101,16 @@ class MBC_DigestEmail_User
   }
 
   /**
-   * setFirstName: Set the user first name.
+   * setFirstName: Set the user first name. If value does not exist use default user name value.
    */
   public function setFirstName($firstName) {
 
-    $this->firstName = $firstName;
-  }
-
-  /**
-   * getFirstName: gether user first name. If value does not exist use default user name value.
-   *
-   * @return string firstName
-   */
-  public function getFirstName() {
-
-    if (isset($this->firstName)) {
-      return $this->firstName;
+    if (empty($firstName)) {
+      $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
     }
-
-    $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
-    return $this->firstName;
+    else {
+      $this->firstName = $firstName;
+    }
   }
 
   /**
