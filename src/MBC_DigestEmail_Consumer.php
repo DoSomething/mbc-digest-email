@@ -132,13 +132,11 @@ class MBC_DigestEmail_Consumer extends MB_Toolbox_BaseConsumer {
     // objects waiting to be sent create a batch of messages from the remaining user objects.
     // Not clear on the ready vs unacked values as the docs suggest re-declaring
     $queueMessages = parent::queueStatus('digestUserQueue');
-    $waitingUserMessages = $this->waitingUserMessages();
     echo '- queueMessages ready: ' . $queueMessages['ready'], PHP_EOL;
     echo '- queueMessages unacked: ' . $queueMessages['unacked'], PHP_EOL;
-    echo '- waitingUserMessages: ' . $waitingUserMessages, PHP_EOL;
+    echo '- waitingUserMessages: ' . $this->waitingUserMessages(), PHP_EOL;
 
-    if (($waitingUserMessages >= $this->batchSize) ||
-        ($waitingUserMessages < $this->batchSize && $queueMessages['ready'] == 0)) {
+    if ($this->sendBatch($queueMessages['ready'])) {
 
       echo '%% sending email batch', PHP_EOL . PHP_EOL;
 
@@ -248,10 +246,9 @@ private function waitingUserMessages() {
     $this->mbcDEUser->setOrginalPayload($userProperty['payload']);
 
     // Add user object to users property of current instance of Consumer class only in the case where the user
-    // object has at least on campaign entry. It's possible to get to this point with no campaign entries due
+    // object has at least one campaign entry. It's possible to get to this point with no campaign entries due
     // to encountering Exceptions in the Campaign object creation process.
     if (count($this->mbcDEUser->campaigns) > 0) {
-      $this->users[] = $this->mbcDEUser;
       return $this->mbcDEUser;
     }
     else {
@@ -316,10 +313,42 @@ private function waitingUserMessages() {
     if (count($this->mbcDEUser->campaigns) > 0) {
       $this->mbcDEUser->getSubsciptionsURL();
       $this->mbcDEMessenger->addUser($this->mbcDEUser);
+      $this->users[] = $this->mbcDEUser;
+    }
+    else {
+      echo '- No valid campaigns to compose digest message for user.', PHP_EOL;
     }
 
     // Cleanup for processing of next user digest settings
     unset($this->mbcDEUser);
+  }
+
+  /**
+   * sendBatch() : Determine if a batch of messages should be sent.
+   *
+   * @param integer $queuedMessages
+   *   The number of messages waiting to be processed.
+   *
+   * @return boolean
+   *   A decision if a batch of messages should be sent.
+   */
+  protected function sendBatch($queuedMessages) {
+
+    $waitingDigestMessages = $this->waitingUserMessages();
+
+    if ($waitingDigestMessages >= $this->batchSize) {
+      return true;
+    }
+
+    if ($waitingDigestMessages == 0 && $queuedMessages == 0) {
+      return false;
+    }
+
+    if ($waitingDigestMessages < $this->batchSize && $queuedMessages == 0) {
+      return true;
+    }
+
+    return false;
   }
 
 }
