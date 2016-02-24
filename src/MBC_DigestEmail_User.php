@@ -234,7 +234,7 @@ class MBC_DigestEmail_User
   }
 
   /**
-   * Filter campaigns to meet requirments to be included in digest messages.
+   * Filter campaigns to meet requirements for including a campaign in user digest message.
    *
    * @param array $userCampaigns
    *   A list of user campaigns to apply filters to.
@@ -248,17 +248,22 @@ class MBC_DigestEmail_User
     $filteredUserCampaigns = [];
     foreach ($userCampaigns as $userCampaignNID => $userCampaign) {
 
-      // @todo: Prevent users seeing a campaign in their digest more than five times. Exclude campaigns
-      // that the user has signed up for over five weeks in the past.
-
-      // Include active campaigns
-      if (isset($campaigns[$userCampaignNID]->status) && $campaigns[$userCampaignNID]->status == 'active') {
-        $filteredUserCampaigns[$userCampaignNID] = $userCampaign;
+      // Prevent users seeing a campaign in their digest more than five times. Exclude campaigns
+      // that the user has signed up for over five weeks in the past based on the digest message
+      // being sent weekly.
+      if ($userCampaign < strtotime("-5 week")) {
+        continue;
       }
-    }
-    $userCampaigns = $filteredUserCampaigns;
 
-    return $userCampaigns;
+      // Exclude inactive campaigns
+      if (empty($campaigns[$userCampaignNID]->status) || $campaigns[$userCampaignNID]->status != 'active') {
+        continue;
+      }
+
+      $filteredUserCampaigns[$userCampaignNID] = $userCampaign;
+    }
+
+    return $filteredUserCampaigns;
   }
 
   /**
