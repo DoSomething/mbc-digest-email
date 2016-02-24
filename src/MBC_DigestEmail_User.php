@@ -102,27 +102,56 @@ class MBC_DigestEmail_User
 
   /**
    * setFirstName: Set the user first name. If value does not exist use default user name value.
+   *
+   * @param array $userProperty
+   *   Values specific to the user document being processed.
    */
-  public function setFirstName($firstName) {
+  public function setFirstName($userProperty) {
 
-    if (empty($firstName)) {
+    if (empty($userProperty['first_name'])) {
       $this->firstName = constant(get_class($this->mbToolbox)."::DEFAULT_USERNAME");
     }
     else {
-      $this->firstName = $firstName;
+      $this->firstName = $userProperty['first_name'];
     }
   }
 
   /**
    * Set the user Drupal UID
    *
-   * @todo: Lookup Drupal UID by email if the value is not returned in the user document from
+   * @todo: Lookup Drupal UID by email with Drupal API if the value is not returned in the user document from
    * mb-user-api request. May not be necessary when bug in mb-user-api is resolved that results in several
    * user documents, one of campaign activity while other has user details such as Drupal UID.
+   *
+   * Bug has been resolved but user documents need to be merged.
+   *
+   * @param array $userProperty
+   *   Values specific to the user document being processed.
    */
-  public function setDrupalUID($uid) {
+  public function setDrupalUID($userProperty) {
 
-    $this->drupal_uid = $uid;
+    if (!(isset($userProperty['drupal_uid']))) {
+      $this->drupal_uid = '';
+    }
+    else {
+      $this->drupal_uid = $userProperty['drupal_uid'];
+    }
+  }
+
+  /**
+   * setLanguage(): The language that the digest message "chrome"should be presented in.
+   *
+   * @param array $userProperty
+   *   Values specific to the user document being processed.
+   */
+  public function setLanguage($userProperty) {
+
+    if (empty($userProperty['source'])) {
+      $this->language = 'US';
+    }
+    else {
+      $this->language = $userProperty['source'];
+    }
   }
 
   /**
@@ -136,17 +165,6 @@ class MBC_DigestEmail_User
   public function setOrginalPayload($payload) {
 
     $this->originalPayload = $payload;
-  }
-
-  /**
-   * setLanguage(): The language that the digest message "chrome"should be presented in.
-   *
-   * @var string $source
-   *   The source registration site for the user registration defines the language preference of the user.
-   */
-  public function setLanguage($source) {
-
-    $this->language = $source;
   }
 
   /**
