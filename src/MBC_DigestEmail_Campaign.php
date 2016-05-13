@@ -143,7 +143,8 @@ class MBC_DigestEmail_Campaign {
     $campaignSettings = $this->gatherSettings($nid);
 
     $this->drupal_nid = $campaignSettings->nid;
-    $this->url = 'http://www.dosomething.org/node/' . $campaignSettings->nid . '#prove';
+    $googleAnalytics = '?utm_source=digest&utm_medium=email&utm_campaign=start20160512';
+    $this->url = 'http://www.dosomething.org/us/node/' . $campaignSettings->nid . $googleAnalytics . '#prove';
 
     // Title - required
     if (isset($campaignSettings->title)) {

@@ -170,7 +170,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
 
     $firstName = $this->users[$userEmail]->firstName;
     $campaignsMarkup = $this->generateUserCampaignMarkup($userEmail);
-    $unsubscribeLinkMarkup = 'http://' . $this->users[$userEmail]->subscription_link->url;
+    $unsubscribeLinkMarkup = 'http://' . $this->users[$userEmail]->subscription_link->url . '&utm_source=digest&utm_medium=email&utm_campaign=start20160512';
 
     $this->users[$userEmail]->merge_vars = [
       'FNAME' =>  $firstName,
@@ -374,20 +374,20 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       'Your weekly campaign digest: ' . date('F j'),
       date('F j') . ': Your weekly campaign digest!',
       'Tips for your DoSomething.org campaigns!',
-      'Comin\' atcha: tips for your DoSomething.org campaign!',
-      '*|FNAME|* - It\'s your ' . date('F j') . ' campaign digest',
+      'Comin atcha: tips for your DoSomething.org campaign!',
+      '*|FNAME|* - Its your ' . date('F j') . ' campaign digest',
       'Just for you: DoSomething.org campaign tips',
       'Your weekly campaign tips from DoSomething.org',
       date('F j') . ': campaign tips from DoSomething.org',
-      'You signed up for campaigns. Here\'s how to rock them!',
+      'You signed up for campaigns. Heres how to rock them!',
       'Tips for you (and only you!)',
       'Ready for your weekly campaign tips?',
-      'Your weekly campaign tips: comin\' atcha!',
+      'Your weekly campaign tips: comin atcha!',
       'Fresh out the oven (just for you!)',
     );
     // Sequentially select an item from the list of subjects, a different one
     // every week and start from the top once the end of the list is reached
-    $subjectCount = (int) abs(date('W') - (round(date('W') / count($subjects)) * count($subjects)));
+    $subjectCount = round((date('W') * count($subjects)) / 52);
 
     return $subjects[$subjectCount];
   }
@@ -442,8 +442,6 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       'global_merge_vars' => $globalMergeVars,
       'merge_vars' => $userMergeVars,
       'tags' => $tags,
-      'google_analytics_domains' => ['www.dosomething.org', 'dosomething.org'],
-      'google_analytics_campaign' => 'mbc-digest-email'
     );
 
     return $composedDigestSubmission ;
