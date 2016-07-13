@@ -225,7 +225,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   * setGlobalMergeVars(): Formatted global merge var values based on
+   * getGlobalMergeVars(): Formatted global merge var values based on
    * Mandrill send-template API spec:
    * https://mandrillapp.com/api/docs/messages.JSON.html#method=send-template
    *
@@ -250,7 +250,8 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
   }
 
   /**
-   * getUsersDigestSettings(): Generate "to" and "merge_var" values using the same index to ensure the indexes match.
+   * getUsersDigestSettings(): Generate "to" and "merge_var" values using the same index
+   * to ensure the indexes match.
    *
    * @return array $userDigestSettings
    *   Formatted values based on Mandrill API requirements.
@@ -377,7 +378,7 @@ class MBC_DigestEmail_MandrillMessenger extends MBC_DigestEmail_BaseMessenger {
       'Comin atcha: tips for your DoSomething.org campaign!',
       '*|FNAME|* - Its your ' . date('F j') . ' campaign digest',
       'Just for you: DoSomething.org campaign tips',
-      'Your weekly campaign tips from DoSomething.org',
+      "It's your weekly campaign tips from DoSomething.org",
       date('F j') . ': campaign tips from DoSomething.org',
       'You signed up for campaigns. Heres how to rock them!',
       'Tips for you (and only you!)',
