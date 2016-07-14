@@ -1,12 +1,15 @@
 # Ignore configuration files that may contain sensitive information.
 /messagebroker-config
 
-# Ignor composer working files
+# Ignore composer working files
 composer.lock
 /vendor/
 
-# Ignor testing working files
+# Ignore testing working files
 tests/phpunit.xml
 
-# Ignor OSX system files
+# Ignore OSX system files
 .DS_Store
+
+# Ingnore PHPStorm configuration files
+.idea
