@@ -267,6 +267,11 @@ private function waitingUserMessages() {
       return FALSE;
     }
 
+    if (preg_match('/@mobile\.import$/', $this->message['email'])) {
+      echo '- canProcess(), Mobile placeholder address: ' . $this->message['email'], PHP_EOL;
+      return false;
+    }
+
     // Must have drupal_uid (for unsubscribe link)
     if (!isset($this->message['drupal_uid'])) {
       echo 'MBC_DigestEmail_Consumer->canProcess(): Message missing uid (Drupal node ID).', PHP_EOL;
